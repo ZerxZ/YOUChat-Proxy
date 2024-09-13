@@ -10,6 +10,7 @@ const app = express();
 const port = process.env.PORT || 8080;
 const validApiKey = process.env.PASSWORD;
 const availableModels = [
+    "openai_o1",
     "gpt_4o",
     "gpt_4_turbo",
     "gpt_4",
@@ -37,6 +38,7 @@ const modelMappping = {
     "gpt-4": "gpt_4",
     "gpt-4o": "gpt_4o",
     "gpt-4-turbo": "gpt_4_turbo",
+    "openai-o1": "openai_o1",
 };
 
 // import config.mjs
