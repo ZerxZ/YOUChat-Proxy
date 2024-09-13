@@ -864,7 +864,7 @@ class YouProvider {
                 }
 
                 if (enableDelayLogic) {
-                    await new Promise(resolve => setTimeout(resolve, 4000)); // 4秒延迟
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // 5秒延迟
                     console.log(`尝试发送请求 (尝试 ${attempt}/${maxRetries})`);
 
                     const {connected, cloudflareDetected, error} = await checkConnectionAndCloudflare(page);
