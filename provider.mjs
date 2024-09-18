@@ -114,7 +114,6 @@ class YouProvider {
             createDirectoryIfNotExists(path.join(__dirname, "browser_profiles", currentUsername));
 
             try {
-                await sleep(1000);
                 const response = await connect({
                     headless: "auto",
                     turnstile: true,
@@ -158,9 +157,8 @@ class YouProvider {
                         session.dsr
                     ));
                     await page.goto("https://you.com", {timeout: timeout});
+                    await sleep(5000); // 等待加载完毕
                 }
-
-                await sleep(5000); // 等待加载完毕
 
                 // 如果遇到盾了就多等一段时间
                 const pageContent = await page.content();
