@@ -30,10 +30,10 @@ class YouProvider {
 
     getRandomSwitchThreshold() {
         if (this.currentMode === "default") {
-            return Math.floor(Math.random() * 6) + 1;
+            return Math.floor(Math.random() * 3) + 1;
         } else {
             // custom模式回合不小于上一次default
-            return Math.floor(Math.random() * (7 - this.lastDefaultThreshold)) + this.lastDefaultThreshold;
+            return Math.floor(Math.random() * (4 - this.lastDefaultThreshold)) + this.lastDefaultThreshold;
         }
     }
 
@@ -326,7 +326,7 @@ class YouProvider {
                 const loginInfo = await page.evaluate(() => {
                     const userProfileElement = document.querySelector('[data-testid="user-profile-button"]');
                     if (userProfileElement) {
-                        const emailElement = userProfileElement.querySelector('.sc-9d7dc8d-4');
+                        const emailElement = userProfileElement.querySelector('.sc-3ab4f4f1-4');
                         return emailElement ? emailElement.textContent : null;
                     }
                     return null;
