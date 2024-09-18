@@ -9,6 +9,7 @@ import {execSync} from 'child_process';
 import os from 'os';
 import './proxyAgent.mjs';
 import {formatMessages} from './formatMessages.mjs';
+import NetworkMonitor from './networkMonitor.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +27,7 @@ class YouProvider {
         this.requestsInCurrentMode = 0;
         this.switchThreshold = this.getRandomSwitchThreshold();
         this.lastDefaultThreshold = 0; // 记录上一次default模式的阈值
+        this.networkMonitor = new NetworkMonitor();
     }
 
     getRandomSwitchThreshold() {
@@ -234,6 +236,8 @@ class YouProvider {
             }
         }
         console.log(`验证完毕，有效cookie数量 ${Object.keys(this.sessions).filter((username) => this.sessions[username].valid).length}`);
+        // 开始网络监控
+        await this.networkMonitor.startMonitoring();
     }
 
     async getSubscriptionInfo(page) {
@@ -510,6 +514,9 @@ class YouProvider {
     }
 
     async getCompletion({username, messages, stream = false, proxyModel, useCustomMode = false}) {
+        if (this.networkMonitor.isNetworkBlocked()) {
+            throw new Error("网络异常，请稍后再试");
+        }
         const session = this.sessions[username];
         if (!session || !session.valid) {
             throw new Error(`用户 ${username} 的会话无效`);
@@ -990,7 +997,11 @@ class YouProvider {
 
         } catch (error) {
             console.error("评估过程中出错:", error);
-            emitter.emit("error", error);
+            if (error.message.includes("Browser Disconnected")) {
+                console.log("浏览器断开连接，等待网络恢复...");
+            } else {
+                emitter.emit("error", error);
+            }
         }
 
         const cancel = () => {
