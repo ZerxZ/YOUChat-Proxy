@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import {fileURLToPath} from "url";
 import {createDirectoryIfNotExists, createDocx, extractCookie, getSessionCookie, sleep} from "./utils.mjs";
-import {execSync} from 'child_process';
+import {exec, execSync} from 'child_process';
 import os from 'os';
 import './proxyAgent.mjs';
 import {formatMessages} from './formatMessages.mjs';
@@ -28,6 +28,7 @@ class YouProvider {
         this.switchThreshold = this.getRandomSwitchThreshold();
         this.lastDefaultThreshold = 0; // 记录上一次default模式的阈值
         this.networkMonitor = new NetworkMonitor();
+        this.isTeamAccount = false; // 是否为Team账号
     }
 
     getRandomSwitchThreshold() {
@@ -130,7 +131,7 @@ class YouProvider {
                     console.log(`正在为 session #${session.configIndex} 进行手动登录...`);
                     await page.goto("https://you.com", {timeout: timeout});
                     // 等待页面加载完毕
-                    await sleep(5000);
+                    await sleep(3000);
                     console.log(`请在打开的浏览器窗口中手动登录 You.com (session #${session.configIndex})`);
                     const {loginInfo, sessionCookie} = await this.waitForManualLogin(page);
                     if (sessionCookie) {
@@ -162,6 +163,12 @@ class YouProvider {
                     await sleep(5000); // 等待加载完毕
                 }
 
+                // 检测是否为 team 账号
+                this.isTeamAccount = await page.evaluate(() => {
+                    const teamElement = document.querySelector('div._16bctla1 p._16bctla2');
+                    return teamElement && teamElement.textContent === 'Your Team';
+                });
+
                 // 如果遇到盾了就多等一段时间
                 const pageContent = await page.content();
                 if (pageContent.indexOf("https://challenges.cloudflare.com") > -1) {
@@ -180,28 +187,41 @@ class YouProvider {
                     const json = JSON.parse(content);
                     const allowNonPro = process.env.ALLOW_NON_PRO === "true";
 
-                    if (json.subscriptions && json.subscriptions.length > 0) {
-                        console.log(`${currentUsername} 有效`);
+                    if (this.isTeamAccount) {
+                        console.log(`${currentUsername} 有效 (Team 计划)`);
+                        session.valid = true;
+                        session.browser = browser;
+                        session.page = page;
+                        session.isTeam = true;
+
+                        // 获取 Team 订阅信息
+                        const teamSubscriptionInfo = await this.getTeamSubscriptionInfo(json.org_subscriptions[0]);
+                        if (teamSubscriptionInfo) {
+                            session.subscriptionInfo = teamSubscriptionInfo;
+                        }
+                    } else if (json.subscriptions && json.subscriptions.length > 0) {
+                        console.log(`${currentUsername} 有效 (Pro 计划)`);
                         session.valid = true;
                         session.browser = browser;
                         session.page = page;
                         session.isPro = true;
 
-                        // 获取订阅信息
+                        // 获取 Pro 订阅信息
                         const subscriptionInfo = await this.getSubscriptionInfo(page);
                         if (subscriptionInfo) {
                             session.subscriptionInfo = subscriptionInfo;
                         }
                     } else if (allowNonPro) {
                         console.log(`${currentUsername} 有效 (非Pro)`);
-                        console.warn(`警告: ${currentUsername} 没有Pro订阅，功能受限。`);
+                        console.warn(`警告: ${currentUsername} 没有Pro或Team订阅，功能受限。`);
                         session.valid = true;
                         session.browser = browser;
                         session.page = page;
                         session.isPro = false;
+                        session.isTeam = false;
                     } else {
                         console.log(`${currentUsername} 无有效订阅`);
-                        console.warn(`警告: ${currentUsername} 可能没有有效的订阅。请检查You是否有有效的Pro订阅。`);
+                        console.warn(`警告: ${currentUsername} 可能没有有效的订阅。请检查You是否有有效的Pro或Team订阅。`);
                         await this.clearYouCookies(page);
                         await browser.close();
                     }
@@ -226,11 +246,18 @@ class YouProvider {
                     console.log(`  订阅计划: ${session.subscriptionInfo.planName}`);
                     console.log(`  到期日期: ${session.subscriptionInfo.expirationDate}`);
                     console.log(`  剩余天数: ${session.subscriptionInfo.daysRemaining}天`);
+                    if (session.isTeam) {
+                        console.log(`  租户ID: ${session.subscriptionInfo.tenantId}`);
+                        console.log(`  许可数量: ${session.subscriptionInfo.quantity}`);
+                        console.log(`  已使用许可: ${session.subscriptionInfo.usedQuantity}`);
+                        console.log(`  状态: ${session.subscriptionInfo.status}`);
+                        console.log(`  计费周期: ${session.subscriptionInfo.interval}`);
+                    }
                     if (session.subscriptionInfo.cancelAtPeriodEnd) {
-                        console.log('  注意: 该订阅已设置为在当前周期结束后取消');
+                        console.warn('  注意: 该订阅已设置为在当前周期结束后取消');
                     }
                 } else {
-                    console.log('  账户类型: 非Pro（功能受限）');
+                    console.warn('  账户类型: 非Pro/非Team（功能受限）');
                 }
                 console.log('}');
             }
@@ -238,6 +265,66 @@ class YouProvider {
         console.log(`验证完毕，有效cookie数量 ${Object.keys(this.sessions).filter((username) => this.sessions[username].valid).length}`);
         // 开始网络监控
         await this.networkMonitor.startMonitoring();
+    }
+
+    async getTeamSubscriptionInfo(subscription) {
+        if (!subscription) {
+            console.warn('没有有效的Team订阅信息');
+            return null;
+        }
+
+        const endDate = new Date(subscription.current_period_end_date);
+        const today = new Date();
+
+        const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+        return {
+            expirationDate: endDate.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }),
+            daysRemaining: daysRemaining,
+            planName: subscription.plan_name,
+            cancelAtPeriodEnd: subscription.canceled_at !== null,
+            isActive: subscription.is_active,
+            status: subscription.status,
+            tenantId: subscription.tenant_id,
+            quantity: subscription.quantity,
+            usedQuantity: subscription.used_quantity,
+            interval: subscription.interval,
+            amount: subscription.amount
+        };
+    }
+
+    async focusBrowserWindow(title) {
+        return new Promise((resolve, reject) => {
+            if (process.platform === 'win32') {
+                // Windows
+                exec(`powershell.exe -Command "(New-Object -ComObject WScript.Shell).AppActivate('${title}')"`, (error) => {
+                    if (error) {
+                        console.error('无法激活窗口:', error);
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+            } else if (process.platform === 'darwin') {
+                // macOS
+                exec(`osascript -e 'tell application "System Events" to set frontmost of every process whose displayed name contains "${title}" to true'`, (error) => {
+                    if (error) {
+                        console.error('无法激活窗口:', error);
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+            } else {
+                // Linux 或其他系统
+                console.warn('当前系统不支持自动切换窗口到前台，请手动切换');
+                resolve();
+            }
+        });
     }
 
     async getSubscriptionInfo(page) {
@@ -384,6 +471,10 @@ class YouProvider {
                     const jwt = JSON.parse(Buffer.from(ds.split(".")[1], "base64").toString());
                     sessionCookie.email = jwt.email;
                     sessionCookie.isNewVersion = true;
+                    // tenants 的解析
+                    if (jwt.tenants) {
+                        sessionCookie.tenants = jwt.tenants;
+                    }
                 } catch (error) {
                     console.error('解析DS令牌时出错:', error);
                     return null;
