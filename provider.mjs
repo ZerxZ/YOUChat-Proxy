@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import {fileURLToPath} from "url";
 import {createDirectoryIfNotExists, createDocx, extractCookie, getSessionCookie, sleep} from "./utils.mjs";
-import {exec, execSync} from 'child_process';
+import {execSync} from 'child_process';
 import os from 'os';
 import './proxyAgent.mjs';
 import {formatMessages} from './formatMessages.mjs';
@@ -295,36 +295,6 @@ class YouProvider {
             interval: subscription.interval,
             amount: subscription.amount
         };
-    }
-
-    async focusBrowserWindow(title) {
-        return new Promise((resolve, reject) => {
-            if (process.platform === 'win32') {
-                // Windows
-                exec(`powershell.exe -Command "(New-Object -ComObject WScript.Shell).AppActivate('${title}')"`, (error) => {
-                    if (error) {
-                        console.error('无法激活窗口:', error);
-                        reject(error);
-                    } else {
-                        resolve();
-                    }
-                });
-            } else if (process.platform === 'darwin') {
-                // macOS
-                exec(`osascript -e 'tell application "System Events" to set frontmost of every process whose displayed name contains "${title}" to true'`, (error) => {
-                    if (error) {
-                        console.error('无法激活窗口:', error);
-                        reject(error);
-                    } else {
-                        resolve();
-                    }
-                });
-            } else {
-                // Linux 或其他系统
-                console.warn('当前系统不支持自动切换窗口到前台，请手动切换');
-                resolve();
-            }
-        });
     }
 
     async getSubscriptionInfo(page) {
