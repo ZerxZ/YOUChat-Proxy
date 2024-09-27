@@ -328,7 +328,7 @@ class YouProvider {
                 const loginInfo = await page.evaluate(() => {
                     const userProfileElement = document.querySelector('[data-testid="user-profile-button"]');
                     if (userProfileElement) {
-                        const emailElement = userProfileElement.querySelector('.sc-3ab4f4f1-4');
+                        const emailElement = userProfileElement.querySelector('.sc-19bbc80a-4');
                         return emailElement ? emailElement.textContent : null;
                     }
                     return null;
@@ -522,8 +522,9 @@ class YouProvider {
             throw new Error(`用户 ${username} 的会话无效`);
         }
 
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
         //刷新页面
-        await session.page.goto("https://you.com", {waitUntil: 'domcontentloaded'});
+        // await session.page.goto("https://you.com", {waitUntil: 'domcontentloaded'});
 
         const {page, browser} = session;
         const emitter = new EventEmitter();
