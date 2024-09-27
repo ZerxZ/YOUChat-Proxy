@@ -18,6 +18,8 @@
     "localtunnel": "^2.0.2",
     "socks-proxy-agent": "^8.0.4",
     "https-proxy-agent": "^7.0.5",
-    "ngrok": "^5.0.0-beta.2"
+    "ngrok": "^5.0.0-beta.2",
+    "node-fetch": "^3.3.2",
+    "robotjs": "^0.6.0"
   }
 }
