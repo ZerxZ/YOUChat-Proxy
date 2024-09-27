@@ -5,11 +5,12 @@ import path from "path";
 import fs from "fs";
 import {fileURLToPath} from "url";
 import {createDirectoryIfNotExists, createDocx, extractCookie, getSessionCookie, sleep} from "./utils.mjs";
-import {execSync} from 'child_process';
+import {exec, execSync} from 'child_process';
 import os from 'os';
 import './proxyAgent.mjs';
 import {formatMessages} from './formatMessages.mjs';
 import NetworkMonitor from './networkMonitor.mjs';
+import robot from 'robotjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -169,6 +170,19 @@ class YouProvider {
                     return teamElement && teamElement.textContent === 'Your Team';
                 });
 
+                if (this.isTeamAccount) {
+                    console.log('检测到 Team 账号');
+                    await sleep(3000);
+                    await page.goto("https://you.com/settings/team-details", {timeout: timeout});
+                    await sleep(3000);
+                    // 获取浏览器窗口标题
+                    const title = await page.title();
+                    // 将浏览器窗口切换到前台
+                    await this.focusBrowserWindow(title);
+                    robot.keyTap('r', 'control');
+                    await sleep(5000);
+                }
+
                 // 如果遇到盾了就多等一段时间
                 const pageContent = await page.content();
                 if (pageContent.indexOf("https://challenges.cloudflare.com") > -1) {
@@ -295,6 +309,36 @@ class YouProvider {
             interval: subscription.interval,
             amount: subscription.amount
         };
+    }
+
+    async focusBrowserWindow(title) {
+        return new Promise((resolve, reject) => {
+            if (process.platform === 'win32') {
+                // Windows
+                exec(`powershell.exe -Command "(New-Object -ComObject WScript.Shell).AppActivate('${title}')"`, (error) => {
+                    if (error) {
+                        console.error('无法激活窗口:', error);
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+            } else if (process.platform === 'darwin') {
+                // macOS
+                exec(`osascript -e 'tell application "System Events" to set frontmost of every process whose displayed name contains "${title}" to true'`, (error) => {
+                    if (error) {
+                        console.error('无法激活窗口:', error);
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+            } else {
+                // Linux 或其他系统
+                console.warn('当前系统不支持自动切换窗口到前台，请手动切换');
+                resolve();
+            }
+        });
     }
 
     async getSubscriptionInfo(page) {
