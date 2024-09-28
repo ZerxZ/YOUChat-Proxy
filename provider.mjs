@@ -268,7 +268,7 @@ class YouProvider {
                         console.log(`  计费周期: ${session.subscriptionInfo.interval}`);
                     }
                     if (session.subscriptionInfo.cancelAtPeriodEnd) {
-                        console.warn('  注意: 该订阅已设置为在当前周期结束后取消');
+                        console.log('  注意: 该订阅已设置为在当前周期结束后取消');
                     }
                 } else {
                     console.warn('  账户类型: 非Pro/非Team（功能受限）');
