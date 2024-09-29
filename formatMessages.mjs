@@ -40,7 +40,7 @@ export function formatMessages(messages) {
         if (message.content.includes('<!-- AI Round 0 begins. -->')) {
             formattedMessages.push({
                 role: message.role,
-                content: message.content.replace('<!-- AI Round 0 begins. -->', '--------------------<一切的开始>--------------------\n<!-- AI Round 0 begins. -->')
+                content: message.content.replace('<!-- AI Round 0 begins. -->', '--------------------<建立锚点开始处>--------------------\n<!-- AI Round 0 begins. -->')
             });
             continue;
         }
@@ -56,10 +56,10 @@ export function formatMessages(messages) {
             let roundInfo = '';
             if (i + 1 < messages.length && messages[i + 1].role === 'assistant') {
                 const nextAssistantRound = userRoundCounter + 1;
-                roundInfo = `--------------------<历史第 user = 回合${userRoundCounter}|assistant = 回合${nextAssistantRound} 开始，标记锚点:[${descriptionPointCounter}]>--------------------\n`;
+                roundInfo = `{{历史第 user = 回合${userRoundCounter}|assistant = 回合${nextAssistantRound} 开始，标记锚点:[${descriptionPointCounter}]}}\n`;
             } else {
                 isLatestRound = true;
-                roundInfo = `--------------------<最新user:(${userRoundCounter})回合|assistant:(${userRoundCounter + 1})回合开始，基于上回(${descriptionPointCounter - 1}(user${userRoundCounter - 1}|assistant${userRoundCounter}))中的历史锚点内的\`assistant:\`发言末尾衔接，不得无视下方\`user:\`指引内容，根据多个记忆信息来保持思路清晰，不要出现失忆发言:>--------------------\n`;
+                roundInfo = `{{最新user:(${userRoundCounter})回合|assistant:(${userRoundCounter + 1})回合开始，基于上回(${descriptionPointCounter - 1}(user${userRoundCounter - 1}|assistant${userRoundCounter}))中的历史锚点内的\`assistant:\`发言末尾衔接，叙事创作时不要只关注最近故事动向，尽可能的记住多个历史锚点中的"assistant:..."故事内容，保持思路清晰来响应下一个回复:}}\n`;
             }
             formattedMessages.push({
                 role: 'system',
