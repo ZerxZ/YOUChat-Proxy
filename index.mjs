@@ -286,10 +286,14 @@ app.post("/v1/messages", AnthropicApiKeyAuth, (req, res) => {
     });
 
     req.on("end", async () => {
-        console.log("Handling request of Anthropic format");
+        console.log("处理 Anthropic 格式的请求");
         res.setHeader("Content-Type", "text/event-stream;charset=utf-8");
         res.setHeader("Access-Control-Allow-Origin", "*");
         let jsonBody = JSON.parse(req.rawBody);
+
+        // 处理消息格式
+        jsonBody.messages = normalizeMessages(jsonBody.messages);
+
         if (jsonBody.system) {
             // 把系统消息加入messages的首条
             jsonBody.messages.unshift({role: "system", content: jsonBody.system});
@@ -312,143 +316,128 @@ app.post("/v1/messages", AnthropicApiKeyAuth, (req, res) => {
         console.log(`Using model ${proxyModel}`);
 
         // call provider to get completion
-        await provider
-            .getCompletion({
+        try {
+            const {completion, cancel} = await provider.getCompletion({
                 username: randomSession,
                 messages: jsonBody.messages,
                 stream: !!jsonBody.stream,
                 proxyModel: proxyModel,
                 useCustomMode: process.env.USE_CUSTOM_MODE === "true"
-            })
-            .then(({completion, cancel}) => {
-                completion.on("start", (id) => {
-                    if (jsonBody.stream) {
-                        // send message start
-                        res.write(
-                            createEvent("message_start", {
-                                type: "message_start",
-                                message: {
-                                    id: `${id}`,
-                                    type: "message",
-                                    role: "assistant",
-                                    content: [],
-                                    model: proxyModel,
-                                    stop_reason: null,
-                                    stop_sequence: null,
-                                    usage: {input_tokens: 8, output_tokens: 1},
-                                },
-                            })
-                        );
-                        res.write(createEvent("content_block_start", {
-                            type: "content_block_start",
-                            index: 0,
-                            content_block: {type: "text", text: ""}
-                        }));
-                        res.write(createEvent("ping", {type: "ping"}));
-                    }
-                });
+            });
 
-                completion.on("completion", (id, text) => {
-                    if (jsonBody.stream) {
-                        // send message delta
-                        res.write(
-                            createEvent("content_block_delta", {
-                                type: "content_block_delta",
-                                index: 0,
-                                delta: {type: "text_delta", text: text},
-                            })
-                        );
-                    } else {
-                        // 只会发一次，发送final response
-                        res.write(
-                            JSON.stringify({
-                                id: id,
-                                content: [
-                                    {
-                                        text: text,
-                                    },
-                                    {
-                                        id: "string",
-                                        name: "string",
-                                        input: {},
-                                    },
-                                ],
-                                model: "string",
-                                stop_reason: "end_turn",
-                                stop_sequence: "string",
-                                usage: {
-                                    input_tokens: 0,
-                                    output_tokens: 0,
-                                },
-                            })
-                        );
-                        res.end();
-                    }
-                });
-
-                completion.on("end", () => {
-                    if (jsonBody.stream) {
-                        res.write(createEvent("content_block_stop", {type: "content_block_stop", index: 0}));
-                        res.write(
-                            createEvent("message_delta", {
-                                type: "message_delta",
-                                delta: {stop_reason: "end_turn", stop_sequence: null},
-                                usage: {output_tokens: 12},
-                            })
-                        );
-                        res.write(createEvent("message_stop", {type: "message_stop"}));
-                        res.end();
-                    }
-                });
-
-                res.on("close", () => {
-                    console.log(" > [Client closed]");
-                    completion.removeAllListeners();
-                    cancel();
-                });
-            })
-            .catch((error) => {
-                console.error(error);
+            completion.on("start", (id) => {
                 if (jsonBody.stream) {
-                    res.write(
-                        createEvent("content_block_delta", {
-                            type: "content_block_delta",
-                            index: 0,
-                            delta: {
-                                type: "text_delta",
-                                text: "Error occurred, please check the log.\n\n出现错误，请检查日志：<pre>" + error.stack || error + "</pre>",
-                            },
-                        })
-                    );
-                    res.end();
+                    // send message start
+                    res.write(createEvent("message_start", {
+                        type: "message_start",
+                        message: {
+                            id: `${id}`,
+                            type: "message",
+                            role: "assistant",
+                            content: [],
+                            model: proxyModel,
+                            stop_reason: null,
+                            stop_sequence: null,
+                            usage: {input_tokens: 8, output_tokens: 1},
+                        },
+                    }));
+                    res.write(createEvent("content_block_start", {
+                        type: "content_block_start",
+                        index: 0,
+                        content_block: {type: "text", text: ""}
+                    }));
+                    res.write(createEvent("ping", {type: "ping"}));
+                }
+            });
+
+            completion.on("completion", (id, text) => {
+                if (jsonBody.stream) {
+                    // send message delta
+                    res.write(createEvent("content_block_delta", {
+                        type: "content_block_delta",
+                        index: 0,
+                        delta: {type: "text_delta", text: text},
+                    }));
                 } else {
-                    res.write(
-                        JSON.stringify({
-                            id: uuidv4(),
-                            content: [
-                                {
-                                    text: "Error occurred, please check the log.\n\n出现错误，请检查日志：<pre>" + error.stack || error + "</pre>",
-                                },
-                                {
-                                    id: "string",
-                                    name: "string",
-                                    input: {},
-                                },
-                            ],
-                            model: "string",
-                            stop_reason: "end_turn",
-                            stop_sequence: "string",
-                            usage: {
-                                input_tokens: 0,
-                                output_tokens: 0,
-                            },
-                        })
-                    );
+                    // 只会发一次，发送final response
+                    res.write(JSON.stringify({
+                        id: id,
+                        content: [
+                            {text: text},
+                            {id: "string", name: "string", input: {}},
+                        ],
+                        model: proxyModel,
+                        stop_reason: "end_turn",
+                        stop_sequence: null,
+                        usage: {input_tokens: 0, output_tokens: 0},
+                    }));
                     res.end();
                 }
             });
+
+            completion.on("end", () => {
+                if (jsonBody.stream) {
+                    res.write(createEvent("content_block_stop", {type: "content_block_stop", index: 0}));
+                    res.write(createEvent("message_delta", {
+                        type: "message_delta",
+                        delta: {stop_reason: "end_turn", stop_sequence: null},
+                        usage: {output_tokens: 12},
+                    }));
+                    res.write(createEvent("message_stop", {type: "message_stop"}));
+                    res.end();
+                }
+            });
+
+            res.on("close", () => {
+                console.log(" > [Client closed]");
+                completion.removeAllListeners();
+                cancel();
+            });
+
+        } catch (error) {
+            console.error(error);
+            const errorMessage = "Error occurred, please check the log.\\n\\n出现错误，请检查日志：<pre>" + (error.stack || error) + "</pre>";
+            if (jsonBody.stream) {
+                res.write(createEvent("content_block_delta", {
+                    type: "content_block_delta",
+                    index: 0,
+                    delta: {type: "text_delta", text: errorMessage},
+                }));
+            } else {
+                res.write(JSON.stringify({
+                    id: uuidv4(),
+                    content: [{text: errorMessage}, {id: "string", name: "string", input: {}}],
+                    model: proxyModel,
+                    stop_reason: "error",
+                    stop_sequence: null,
+                    usage: {input_tokens: 0, output_tokens: 0},
+                }));
+            }
+            res.end();
+        }
     });
 });
+
+// 辅助函数：规范化消息格式
+function normalizeMessages(messages) {
+    return messages.map(message => {
+        if (typeof message.content === 'string') {
+            return message;
+        } else if (Array.isArray(message.content)) {
+            // 新版格式，提取文本内容
+            const textContent = message.content
+                .filter(item => item.type === 'text')
+                .map(item => item.text)
+                .join('\n');
+            return {...message, content: textContent};
+        } else {
+            // 未知格式，返回原始消息
+            console.warn('未知的消息格式:', message);
+            return message;
+        }
+    });
+}
+
 
 // handle other
 app.use((req, res, next) => {
