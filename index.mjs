@@ -98,6 +98,9 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
         res.setHeader("Access-Control-Allow-Origin", "*");
         let jsonBody = JSON.parse(req.rawBody);
 
+        // Normalize messages
+        jsonBody.messages = openaiNormalizeMessages(jsonBody.messages);
+
         console.log("message length:" + jsonBody.messages.length);
         // decide which session to use randomly
         let randomSession = Object.keys(provider.sessions)[Math.floor(Math.random() * Object.keys(provider.sessions).length)];
@@ -115,111 +118,40 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
         console.log("Using model " + jsonBody.model);
 
         // call provider to get completion
-        await provider
-            .getCompletion(
-                {
-                    username: randomSession,
-                    messages: jsonBody.messages,
-                    stream: !!jsonBody.stream,
-                    proxyModel: jsonBody.model,
-                    useCustomMode: process.env.USE_CUSTOM_MODE === "true"
-                }
-            )
-            .then(({completion, cancel}) => {
-                completion.on("start", (id) => {
-                    if (jsonBody.stream) {
-                        // send message start
-                        res.write(createEvent(":", "queue heartbeat 114514"));
-                        res.write(
-                            createEvent("data", {
-                                id: msgid,
-                                object: "chat.completion.chunk",
-                                created: Math.floor(new Date().getTime() / 1000),
-                                model: jsonBody.model,
-                                system_fingerprint: "114514",
-                                choices: [{
-                                    index: 0,
-                                    delta: {role: "assistant", content: ""},
-                                    logprobs: null,
-                                    finish_reason: null
-                                }],
-                            })
-                        );
-                    }
-                });
+        try {
+            const {completion, cancel} = await provider.getCompletion({
+                username: randomSession,
+                messages: jsonBody.messages,
+                stream: !!jsonBody.stream,
+                proxyModel: jsonBody.model,
+                useCustomMode: process.env.USE_CUSTOM_MODE === "true"
+            });
 
-                completion.on("completion", (id, text) => {
-                    if (jsonBody.stream) {
-                        // send message delta
-                        res.write(
-                            createEvent("data", {
-                                choices: [
-                                    {
-                                        content_filter_results: {
-                                            hate: {filtered: false, severity: "safe"},
-                                            self_harm: {filtered: false, severity: "safe"},
-                                            sexual: {filtered: false, severity: "safe"},
-                                            violence: {filtered: false, severity: "safe"},
-                                        },
-                                        delta: {content: text},
-                                        finish_reason: null,
-                                        index: 0,
-                                    },
-                                ],
-                                created: Math.floor(new Date().getTime() / 1000),
-                                id: id,
-                                model: jsonBody.model,
-                                object: "chat.completion.chunk",
-                                system_fingerprint: "114514",
-                            })
-                        );
-                    } else {
-                        // 只会发一次，发送final response
-                        res.write(
-                            JSON.stringify({
-                                id: id,
-                                object: "chat.completion",
-                                created: Math.floor(new Date().getTime() / 1000),
-                                model: jsonBody.model,
-                                system_fingerprint: "114514",
-                                choices: [
-                                    {
-                                        index: 0,
-                                        message: {
-                                            role: "assistant",
-                                            content: text,
-                                        },
-                                        logprobs: null,
-                                        finish_reason: "stop",
-                                    },
-                                ],
-                                usage: {
-                                    prompt_tokens: 1,
-                                    completion_tokens: 1,
-                                    total_tokens: 1,
-                                },
-                            })
-                        );
-                        res.end();
-                    }
-                });
-
-                completion.on("end", () => {
-                    if (jsonBody.stream) {
-                        res.write(createEvent("data", "[DONE]"));
-                        res.end();
-                    }
-                });
-
-                res.on("close", () => {
-                    console.log(" > [Client closed]");
-                    completion.removeAllListeners();
-                    cancel();
-                });
-            })
-            .catch((error) => {
-                console.error(error);
+            completion.on("start", (id) => {
                 if (jsonBody.stream) {
+                    // send message start
+                    res.write(createEvent(":", "queue heartbeat 114514"));
+                    res.write(
+                        createEvent("data", {
+                            id: id,
+                            object: "chat.completion.chunk",
+                            created: Math.floor(new Date().getTime() / 1000),
+                            model: jsonBody.model,
+                            system_fingerprint: "114514",
+                            choices: [{
+                                index: 0,
+                                delta: {role: "assistant", content: ""},
+                                logprobs: null,
+                                finish_reason: null
+                            }],
+                        })
+                    );
+                }
+            });
+
+            completion.on("completion", (id, text) => {
+                if (jsonBody.stream) {
+                    // send message delta
                     res.write(
                         createEvent("data", {
                             choices: [
@@ -230,25 +162,23 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
                                         sexual: {filtered: false, severity: "safe"},
                                         violence: {filtered: false, severity: "safe"},
                                     },
-                                    delta: {
-                                        content: "Error occurred, please check the log.\n\n出现错误，请检查日志：<pre>" + error.stack || error + "</pre>",
-                                    },
+                                    delta: {content: text},
                                     finish_reason: null,
                                     index: 0,
                                 },
                             ],
                             created: Math.floor(new Date().getTime() / 1000),
-                            id: uuidv4(),
+                            id: id,
                             model: jsonBody.model,
                             object: "chat.completion.chunk",
                             system_fingerprint: "114514",
                         })
                     );
-                    res.end();
                 } else {
+                    // 只会发一次，发送final response
                     res.write(
                         JSON.stringify({
-                            id: uuidv4(),
+                            id: id,
                             object: "chat.completion",
                             created: Math.floor(new Date().getTime() / 1000),
                             model: jsonBody.model,
@@ -258,7 +188,7 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
                                     index: 0,
                                     message: {
                                         role: "assistant",
-                                        content: "Error occurred, please check the log.\n\n出现错误，请检查日志：<pre>" + error.stack || error + "</pre>",
+                                        content: text,
                                     },
                                     logprobs: null,
                                     finish_reason: "stop",
@@ -274,8 +204,106 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
                     res.end();
                 }
             });
+
+            completion.on("end", () => {
+                if (jsonBody.stream) {
+                    res.write(createEvent("data", "[DONE]"));
+                    res.end();
+                }
+            });
+
+            res.on("close", () => {
+                console.log(" > [Client closed]");
+                completion.removeAllListeners();
+                cancel();
+            });
+        } catch (error) {
+            console.error(error);
+            const errorMessage = "Error occurred, please check the log.\n\n出现错误，请检查日志：<pre>" + (error.stack || error) + "</pre>";
+            if (jsonBody.stream) {
+                res.write(
+                    createEvent("data", {
+                        choices: [
+                            {
+                                content_filter_results: {
+                                    hate: {filtered: false, severity: "safe"},
+                                    self_harm: {filtered: false, severity: "safe"},
+                                    sexual: {filtered: false, severity: "safe"},
+                                    violence: {filtered: false, severity: "safe"},
+                                },
+                                delta: {content: errorMessage},
+                                finish_reason: null,
+                                index: 0,
+                            },
+                        ],
+                        created: Math.floor(new Date().getTime() / 1000),
+                        id: uuidv4(),
+                        model: jsonBody.model,
+                        object: "chat.completion.chunk",
+                        system_fingerprint: "114514",
+                    })
+                );
+            } else {
+                res.write(
+                    JSON.stringify({
+                        id: uuidv4(),
+                        object: "chat.completion",
+                        created: Math.floor(new Date().getTime() / 1000),
+                        model: jsonBody.model,
+                        system_fingerprint: "114514",
+                        choices: [
+                            {
+                                index: 0,
+                                message: {
+                                    role: "assistant",
+                                    content: errorMessage,
+                                },
+                                logprobs: null,
+                                finish_reason: "stop",
+                            },
+                        ],
+                        usage: {
+                            prompt_tokens: 1,
+                            completion_tokens: 1,
+                            total_tokens: 1,
+                        },
+                    })
+                );
+            }
+            res.end();
+        }
     });
 });
+
+// Helper function: Normalize messages
+function openaiNormalizeMessages(messages) {
+    let normalizedMessages = [];
+    let currentSystemMessage = "";
+
+    for (let message of messages) {
+        if (message.role === 'system') {
+            if (currentSystemMessage) {
+                currentSystemMessage += "\n" + message.content;
+            } else {
+                currentSystemMessage = message.content;
+            }
+        } else {
+            if (currentSystemMessage) {
+                normalizedMessages.push({role: 'system', content: currentSystemMessage});
+                currentSystemMessage = "";
+            }
+            normalizedMessages.push(message);
+        }
+    }
+
+    if (currentSystemMessage) {
+        normalizedMessages.push({role: 'system', content: currentSystemMessage});
+    }
+
+    return normalizedMessages;
+}
+
+
 // handle anthropic format model request
 app.post("/v1/messages", AnthropicApiKeyAuth, (req, res) => {
     req.rawBody = "";
@@ -292,7 +320,7 @@ app.post("/v1/messages", AnthropicApiKeyAuth, (req, res) => {
         let jsonBody = JSON.parse(req.rawBody);
 
         // 处理消息格式
-        jsonBody.messages = normalizeMessages(jsonBody.messages);
+        jsonBody.messages = anthropicNormalizeMessages(jsonBody.messages);
 
         if (jsonBody.system) {
             // 把系统消息加入messages的首条
@@ -419,7 +447,7 @@ app.post("/v1/messages", AnthropicApiKeyAuth, (req, res) => {
 });
 
 // 辅助函数：规范化消息格式
-function normalizeMessages(messages) {
+function anthropicNormalizeMessages(messages) {
     return messages.map(message => {
         if (typeof message.content === 'string') {
             return message;
