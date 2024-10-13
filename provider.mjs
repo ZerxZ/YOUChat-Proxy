@@ -693,7 +693,20 @@ class YouProvider {
             if (!this.config.sessions[session.configIndex].user_chat_mode_id) {
                 this.config.sessions[session.configIndex].user_chat_mode_id = {};
             }
-            if (!this.config.sessions[session.configIndex].user_chat_mode_id[proxyModel]) {
+
+            // 检查是否存在与当前用户名匹配的记录
+            let existingUserRecord = Object.keys(this.config.sessions[session.configIndex].user_chat_mode_id).find(key => key === username);
+
+            if (!existingUserRecord) {
+                // 为当前用户创建新的记录
+                this.config.sessions[session.configIndex].user_chat_mode_id[username] = {};
+                // 写回config
+                fs.writeFileSync("./config.mjs", "export const config = " + JSON.stringify(this.config, null, 4));
+                console.log(`Created new record for user: ${username}`);
+            }
+
+            // 检查是否存在对应模型的记录
+            if (!this.config.sessions[session.configIndex].user_chat_mode_id[username][proxyModel]) {
                 // 创建新的user chat mode
                 let userChatMode = await page.evaluate(
                     async (proxyModel, proxyModelName) => {
@@ -720,15 +733,16 @@ class YouProvider {
                     uuidV4().substring(0, 4)
                 );
                 if (userChatMode.chat_mode_id) {
-                    this.config.sessions[session.configIndex].user_chat_mode_id[proxyModel] = userChatMode.chat_mode_id;
+                    this.config.sessions[session.configIndex].user_chat_mode_id[username][proxyModel] = userChatMode.chat_mode_id;
                     // 写回config
                     fs.writeFileSync("./config.mjs", "export const config = " + JSON.stringify(this.config, null, 4));
+                    console.log(`Created new chat mode for user ${username} and model ${proxyModel}`);
                 } else {
-                    if (userChatMode.error) console.log(userChatMode.error)
+                    if (userChatMode.error) console.log(userChatMode.error);
                     console.log("Failed to create user chat mode, will use default mode instead.");
                 }
             }
-            userChatModeId = this.config.sessions[session.configIndex].user_chat_mode_id[proxyModel];
+            userChatModeId = this.config.sessions[session.configIndex].user_chat_mode_id[username][proxyModel];
         } else {
             console.log("Custom mode is disabled, using default mode.");
         }
