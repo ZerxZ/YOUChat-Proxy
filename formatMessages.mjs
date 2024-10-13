@@ -46,19 +46,19 @@ export function formatMessages(messages, proxyModel) {
         }
     }
 
-    // 找到包含 </context> --- 的消息索引
+    // 找到最后一个有效的 user 消息索引
+    let lastUserIndex = -1;
     let contextEndIndex = messages.length;
-    for (let i = 0; i < messages.length; i++) {
+    for (let i = messages.length - 1; i >= 0; i--) {
         if (messages[i].content.includes('</context> ---')) {
             contextEndIndex = i;
+        }
+        if (messages[i].role === 'user' && lastUserIndex === -1) {
+            lastUserIndex = i;
+        }
+        if (lastUserIndex !== -1 && contextEndIndex !== messages.length) {
             break;
         }
-    }
-
-    // 找到最后一个 user 消息的索引（在 </context> --- 之前）
-    let lastUserIndex = contextEndIndex - 1;
-    while (lastUserIndex >= 0 && messages[lastUserIndex].role !== 'user') {
-        lastUserIndex--;
     }
 
     for (let i = 0; i < messages.length; i++) {
@@ -72,7 +72,7 @@ export function formatMessages(messages, proxyModel) {
             continue;
         }
 
-        if (message.role === 'user' && i < contextEndIndex) {
+        if (message.role === 'user' && i <= lastUserIndex) {
             if (isFirstUserFound) {
                 userRoundCounter = lastAssistantRound + 1;
                 descriptionPointCounter++;
@@ -88,14 +88,14 @@ export function formatMessages(messages, proxyModel) {
                 roundInfo = `{{历史第 user = 回合${userRoundCounter}|assistant = 回合${nextAssistantRound} 开始，标记锚点:[${descriptionPointCounter}]}}\n`;
             }
             message.content = roundInfo + message.content;
-        } else if (message.role === 'assistant' && i < contextEndIndex) {
+        } else if (message.role === 'assistant' && i < lastUserIndex) {
             const match = message.content.match(/<!-- AI Round (\d+) begins\. -->/);
             if (match) {
                 assistantRoundCounter = parseInt(match[1]);
                 lastAssistantRound = assistantRoundCounter;
             }
 
-            if (message.content.includes('<CHAR_turn>') && i < lastUserIndex) {
+            if (message.content.includes('<CHAR_turn>')) {
                 message.content += `\n--------------------<历史锚点[${descriptionPointCounter}]结束>--------------------`;
             }
         }
@@ -103,7 +103,6 @@ export function formatMessages(messages, proxyModel) {
         formattedMessages.push(message);
     }
 
-    // 如果 proxyModel 是 gpt_4o，则转换消息前缀为大写
     if (proxyModel === 'gpt_4o') {
         formattedMessages = convertToUpperCase(formattedMessages);
     }
