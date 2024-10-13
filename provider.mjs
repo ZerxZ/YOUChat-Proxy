@@ -4,7 +4,7 @@ import {v4 as uuidV4} from "uuid";
 import path from "path";
 import fs from "fs";
 import {fileURLToPath} from "url";
-import {createDirectoryIfNotExists, createDocx, extractCookie, getSessionCookie, sleep} from "./utils.mjs";
+import {createDirectoryIfNotExists, extractCookie, getSessionCookie, sleep} from "./utils.mjs";
 import {exec, execSync} from 'child_process';
 import os from 'os';
 import './proxyAgent.mjs';
@@ -665,22 +665,28 @@ class YouProvider {
         let lastUpdate = true;
 
         messages.forEach((msg) => {
+            let content = msg.content;
+
+            if (msg.role === "system" && content.startsWith("system:")) {
+                content = content.substring(7).trim();
+            }
+
             if (msg.role === "system" || msg.role === "user") {
                 if (lastUpdate) {
-                    userMessage[userMessage.length - 1].question += msg.content + "\n";
+                    userMessage[userMessage.length - 1].question += content + "\n";
                 } else if (userMessage[userMessage.length - 1].question === "") {
-                    userMessage[userMessage.length - 1].question += msg.content + "\n";
+                    userMessage[userMessage.length - 1].question += content + "\n";
                 } else {
-                    userMessage.push({question: msg.content + "\n", answer: ""});
+                    userMessage.push({question: content + "\n", answer: ""});
                 }
                 lastUpdate = true;
             } else if (msg.role === "assistant") {
                 if (!lastUpdate) {
-                    userMessage[userMessage.length - 1].answer += msg.content + "\n";
+                    userMessage[userMessage.length - 1].answer += content + "\n";
                 } else if (userMessage[userMessage.length - 1].answer === "") {
-                    userMessage[userMessage.length - 1].answer += msg.content + "\n";
+                    userMessage[userMessage.length - 1].answer += content + "\n";
                 } else {
-                    userMessage.push({question: "", answer: msg.content + "\n"});
+                    userMessage.push({question: "", answer: content + "\n"});
                 }
                 lastUpdate = false;
             }
@@ -754,7 +760,7 @@ class YouProvider {
             for (let i = 0; i < length; i++) {
                 result += validChars.charAt(Math.floor(Math.random() * validChars.length));
             }
-            return result + '.docx';
+            return result + '.txt';
         }
 
         // 生成随机长度（6-16）的文件名
@@ -766,7 +772,7 @@ class YouProvider {
             console.log("Using file upload mode");
 
             // 应用格式化逻辑
-            const formattedMessages = formatMessages(messages);
+            const formattedMessages = formatMessages(messages, proxyModel);
 
             // 将格式化后的消息转换为纯文本
             let previousMessages = formattedMessages.map((msg) => `${msg.role}: ${msg.content}`).join("\n\n");
@@ -786,12 +792,12 @@ class YouProvider {
             if (!nonce) throw new Error("Failed to get nonce");
 
             // POST https://you.com/api/upload to upload user message
-            var messageBuffer = await createDocx(previousMessages);
+            var messageBuffer = Buffer.from(previousMessages, 'utf-8');
             var uploadedFile = await page.evaluate(
                 async (messageBuffer, nonce, randomFileName) => {
                     try {
                         let blob = new Blob([new Uint8Array(messageBuffer)], {
-                            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            type: "text/plain",
                         });
                         let form_data = new FormData();
                         form_data.append("file", blob, randomFileName);
