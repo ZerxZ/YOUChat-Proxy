@@ -4,7 +4,7 @@ import {v4 as uuidV4} from "uuid";
 import path from "path";
 import fs from "fs";
 import {fileURLToPath} from "url";
-import {createDirectoryIfNotExists, extractCookie, getSessionCookie, sleep} from "./utils.mjs";
+import {createDirectoryIfNotExists, createDocx, extractCookie, getSessionCookie, sleep} from "./utils.mjs";
 import {exec, execSync} from 'child_process';
 import os from 'os';
 import './proxyAgent.mjs';
@@ -23,6 +23,7 @@ class YouProvider {
         this.preferredBrowser = 'auto';
         this.isCustomModeEnabled = process.env.USE_CUSTOM_MODE === "true";
         this.isRotationEnabled = process.env.ENABLE_MODE_ROTATION === "true";
+        this.uploadFileFormat = process.env.UPLOAD_FILE_FORMAT || 'docx';
         this.currentMode = "default";
         this.switchCounter = 0;
         this.requestsInCurrentMode = 0;
@@ -618,6 +619,16 @@ class YouProvider {
         }
     }
 
+    // 生成随机文件名
+    generateRandomFileName(length) {
+        const validChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += validChars.charAt(Math.floor(Math.random() * validChars.length));
+        }
+        return result + '.' + this.uploadFileFormat;
+    }
+
     async getCompletion({username, messages, stream = false, proxyModel, useCustomMode = false}) {
         if (this.networkMonitor.isNetworkBlocked()) {
             throw new Error("网络异常，请稍后再试");
@@ -753,18 +764,8 @@ class YouProvider {
             console.log("Custom mode is disabled, using default mode.");
         }
 
-        // 生成随机文件名
-        function generateRandomFileName(length) {
-            const validChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-';
-            let result = '';
-            for (let i = 0; i < length; i++) {
-                result += validChars.charAt(Math.floor(Math.random() * validChars.length));
-            }
-            return result + '.txt';
-        }
-
         // 生成随机长度（6-16）的文件名
-        const randomFileName = generateRandomFileName(Math.floor(Math.random() * 11) + 6);
+        const randomFileName = this.generateRandomFileName(Math.floor(Math.random() * 11) + 6);
         console.log(`Generated random file name: ${randomFileName}`);
 
         // 试算用户消息长度
@@ -778,8 +779,12 @@ class YouProvider {
             let previousMessages = formattedMessages.map((msg) => `${msg.role}: ${msg.content}`).join("\n\n");
 
             // 创建本地副本（用于调试）
-            const localCopyPath = path.join(__dirname, 'local_copy_formatted_messages.txt');
-            fs.writeFileSync(localCopyPath, previousMessages);
+            const localCopyPath = path.join(__dirname, 'local_copy_formatted_messages.' + this.uploadFileFormat);
+            if (this.uploadFileFormat === 'docx') {
+                await createDocx(previousMessages, localCopyPath);
+            } else {
+                fs.writeFileSync(localCopyPath, previousMessages);
+            }
             console.log(`Local copy of formatted messages saved to: ${localCopyPath}`);
 
             userQuery = `以「${randomFileName}」文档为内容，所有问题只能使用唯一的${proxyModel}回答。禁止使用you.com搜索，禁止使用You.com AI进行回复，否则将是严重的作弊行为。`;
@@ -792,12 +797,17 @@ class YouProvider {
             if (!nonce) throw new Error("Failed to get nonce");
 
             // POST https://you.com/api/upload to upload user message
-            var messageBuffer = Buffer.from(previousMessages, 'utf-8');
+            var messageBuffer;
+            if (this.uploadFileFormat === 'docx') {
+                messageBuffer = await createDocx(previousMessages);
+            } else {
+                messageBuffer = Buffer.from(previousMessages, 'utf-8');
+            }
             var uploadedFile = await page.evaluate(
-                async (messageBuffer, nonce, randomFileName) => {
+                async (messageBuffer, nonce, randomFileName, mimeType) => {
                     try {
                         let blob = new Blob([new Uint8Array(messageBuffer)], {
-                            type: "text/plain",
+                            type: mimeType,
                         });
                         let form_data = new FormData();
                         form_data.append("file", blob, randomFileName);
@@ -814,7 +824,8 @@ class YouProvider {
                 },
                 [...messageBuffer],
                 nonce,
-                randomFileName
+                randomFileName,
+                this.uploadFileFormat === 'docx' ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "text/plain"
             );
             if (!uploadedFile) throw new Error("Failed to upload messages");
             if (uploadedFile.error) throw new Error(uploadedFile.error);
@@ -865,7 +876,7 @@ class YouProvider {
                         // 自定义终止符延迟触发
                         customEndMarkerTimer = setTimeout(() => {
                             customEndMarkerEnabled = true;
-                        }, 20000);
+                        }, 20000); // 20秒后启用自定义终止符
                     }
                     process.stdout.write(data.youChatToken);
                     accumulatedResponse += data.youChatToken;
