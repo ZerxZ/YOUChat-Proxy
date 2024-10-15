@@ -19,7 +19,7 @@ REM 设置是否启用隧道访问
 set ENABLE_TUNNEL=false
 
 REM 设置隧道类型 (localtunnel 或 ngrok)
-set TUNNEL_TYPE=localtunnel
+set TUNNEL_TYPE=ngrok
 
 REM 设置localtunnel子域名(留空则为随机域名)
 set SUBDOMAIN=
@@ -62,6 +62,9 @@ set ENABLE_MODE_ROTATION=false
 
 REM 是否启用隐身模式
 set INCOGNITO_MODE=false
+
+REM 设置上传文件格式 (docx 或 txt) gpt_4o 使用txt可能更好破限
+set UPLOAD_FILE_FORMAT=docx
 
 REM 运行 Node.js 应用程序
 node index.mjs
