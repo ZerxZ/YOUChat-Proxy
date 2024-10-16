@@ -779,12 +779,8 @@ class YouProvider {
             let previousMessages = formattedMessages.map((msg) => `${msg.role}: ${msg.content}`).join("\n\n");
 
             // 创建本地副本（用于调试）
-            const localCopyPath = path.join(__dirname, 'local_copy_formatted_messages.' + this.uploadFileFormat);
-            if (this.uploadFileFormat === 'docx') {
-                await createDocx(previousMessages, localCopyPath);
-            } else {
-                fs.writeFileSync(localCopyPath, previousMessages);
-            }
+            const localCopyPath = path.join(__dirname, 'local_copy_formatted_messages.txt');
+            fs.writeFileSync(localCopyPath, previousMessages);
             console.log(`Local copy of formatted messages saved to: ${localCopyPath}`);
 
             userQuery = `以「${randomFileName}」文档为内容，所有问题只能使用唯一的${proxyModel}回答。禁止使用you.com搜索，禁止使用You.com AI进行回复，否则将是严重的作弊行为。`;
