@@ -3,6 +3,9 @@
 REM 安装依赖包
 call npm install
 
+REM 设置代理的网站：you、perplexity
+set ACTIVE_PROVIDER=you
+
 REM 设置是否启用手动登录
 set USE_MANUAL_LOGIN=true
 
