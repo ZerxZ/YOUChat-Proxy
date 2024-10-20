@@ -155,4 +155,55 @@ function createEvent(event, data) {
 	return `event: ${event}\ndata: ${data}\n\n`;
 }
 
-export { createEvent, createDirectoryIfNotExists, sleep, extractCookie, getSessionCookie, createDocx, getGitRevision };
+function extractPerplexityCookie(cookieString) {
+    const cookies = cookie.parse(cookieString);
+    return {
+        sessionToken: cookies['__Secure-next-auth.session-token'],
+        isIncognito: cookies['pplx.is-incognito'] === 'true'
+    };
+}
+
+function getPerplexitySessionCookie(extractedCookie) {
+    let sessionCookie = [];
+
+    if (extractedCookie.sessionToken) {
+        sessionCookie.push({
+            name: "__Secure-next-auth.session-token",
+            value: extractedCookie.sessionToken,
+            domain: "www.perplexity.ai",
+            path: "/",
+            expires: 1800000000,
+            httpOnly: true,
+            secure: true,
+            sameSite: "Lax",
+        });
+    }
+
+    // 添加无痕模式 cookie (如果启用)
+    if (process.env.INCOGNITO_MODE === "true") {
+        sessionCookie.push({
+            name: "pplx.is-incognito",
+            value: "true",
+            domain: "www.perplexity.ai",
+            path: "/",
+            expires: 1800000000,
+            httpOnly: false,
+            secure: true,
+            sameSite: "Lax",
+        });
+    }
+
+    return sessionCookie;
+}
+
+export {
+    createEvent,
+    createDirectoryIfNotExists,
+    sleep,
+    extractCookie,
+    getSessionCookie,
+    createDocx,
+    getGitRevision,
+    extractPerplexityCookie,
+    getPerplexitySessionCookie
+};
