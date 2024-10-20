@@ -102,6 +102,23 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
         jsonBody.messages = openaiNormalizeMessages(jsonBody.messages);
 
         console.log("message length:" + jsonBody.messages.length);
+
+        // 获取当前 Provider 实例
+        const currentProvider = provider.provider;
+
+        // 获取会话列表
+        const sessions = currentProvider.sessions;
+
+        // 检查是否有可用的会话
+        if (!sessions || Object.keys(sessions).length === 0) {
+            console.error('没有可用的会话，请检查 Provider 的初始化是否成功，或检查配置文件。');
+            res.write(JSON.stringify({
+                error: 'No available sessions.',
+            }));
+            res.end();
+            return;
+        }
+
         // decide which session to use randomly
         let randomSession = Object.keys(provider.sessions)[Math.floor(Math.random() * Object.keys(provider.sessions).length)];
         console.log("Using session " + randomSession);
@@ -323,13 +340,29 @@ app.post("/v1/messages", AnthropicApiKeyAuth, (req, res) => {
         jsonBody.messages = anthropicNormalizeMessages(jsonBody.messages);
 
         if (jsonBody.system) {
-            // 把系统消息加入messages的首条
-            jsonBody.messages.unshift({role: "system", content: jsonBody.system});
+            // 把系统消息加入 messages 的首条
+            jsonBody.messages.unshift({ role: "system", content: jsonBody.system });
         }
         console.log("message length:" + jsonBody.messages.length);
 
-        // decide which session to use randomly
-        let randomSession = Object.keys(provider.sessions)[Math.floor(Math.random() * Object.keys(provider.sessions).length)];
+        // 获取当前 Provider 实例
+        const currentProvider = provider.provider;
+
+        // 获取会话列表
+        const sessions = currentProvider.sessions;
+
+        // 检查是否有可用的会话
+        if (!sessions || Object.keys(sessions).length === 0) {
+            console.error('没有可用的会话，请检查 Provider 的初始化是否成功，或检查配置文件。');
+            res.write(JSON.stringify({
+                error: 'No available sessions.',
+            }));
+            res.end();
+            return;
+        }
+
+        // 随机选择一个会话
+        let randomSession = Object.keys(sessions)[Math.floor(Math.random() * Object.keys(sessions).length)];
         console.log("Using session " + randomSession);
 
         // decide which model to use
