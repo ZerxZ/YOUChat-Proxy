@@ -85,20 +85,23 @@ app.get("/v1/models", OpenAIApiKeyAuth, (req, res) => {
 });
 // handle openai format model request
 app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
+    // 用于存储请求体
     req.rawBody = "";
     req.setEncoding("utf8");
 
+    // 接收数据
     req.on("data", function (chunk) {
         req.rawBody += chunk;
     });
 
+    // 数据接收完毕后处理请求
     req.on("end", async () => {
-        console.log("Handling request of OpenAI format");
+        console.log("处理 OpenAI 格式的请求");
         res.setHeader("Content-Type", "text/event-stream;charset=utf-8");
         res.setHeader("Access-Control-Allow-Origin", "*");
         let jsonBody = JSON.parse(req.rawBody);
 
-        // Normalize messages
+        // 规范化消息
         jsonBody.messages = openaiNormalizeMessages(jsonBody.messages);
 
         console.log("message length:" + jsonBody.messages.length);
@@ -119,12 +122,11 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
             return;
         }
 
-        // decide which session to use randomly
-        let randomSession = Object.keys(provider.sessions)[Math.floor(Math.random() * Object.keys(provider.sessions).length)];
+        // 随机选择一个会话
+        let randomSession = Object.keys(sessions)[Math.floor(Math.random() * Object.keys(sessions).length)];
         console.log("Using session " + randomSession);
-        // call provider to get completion
 
-        // try to map model
+        // 尝试映射模型
         if (jsonBody.model && modelMappping[jsonBody.model]) {
             jsonBody.model = modelMappping[jsonBody.model];
         }
@@ -134,7 +136,7 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
         }
         console.log("Using model " + jsonBody.model);
 
-        // call provider to get completion
+        // 调用 provider 获取回复
         try {
             const {completion, cancel} = await provider.getCompletion({
                 username: randomSession,
@@ -144,9 +146,10 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
                 useCustomMode: process.env.USE_CUSTOM_MODE === "true"
             });
 
+            // 监听开始事件
             completion.on("start", (id) => {
                 if (jsonBody.stream) {
-                    // send message start
+                    // 发送消息开始
                     res.write(createEvent(":", "queue heartbeat 114514"));
                     res.write(
                         createEvent("data", {
@@ -166,9 +169,10 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
                 }
             });
 
+            // 监听完成事件
             completion.on("completion", (id, text) => {
                 if (jsonBody.stream) {
-                    // send message delta
+                    // 发送消息增量
                     res.write(
                         createEvent("data", {
                             choices: [
@@ -192,7 +196,7 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
                         })
                     );
                 } else {
-                    // 只会发一次，发送final response
+                    // 只发送一次，发送最终响应
                     res.write(
                         JSON.stringify({
                             id: id,
@@ -222,6 +226,7 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
                 }
             });
 
+            // 监听结束事件
             completion.on("end", () => {
                 if (jsonBody.stream) {
                     res.write(createEvent("data", "[DONE]"));
@@ -229,6 +234,7 @@ app.post("/v1/chat/completions", OpenAIApiKeyAuth, (req, res) => {
                 }
             });
 
+            // 监听客户端关闭事件
             res.on("close", () => {
                 console.log(" > [Client closed]");
                 completion.removeAllListeners();
