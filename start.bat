@@ -3,7 +3,7 @@
 REM 安装依赖包
 call npm install
 
-REM 设置代理的网站：you、perplexity
+REM 设置代理的网站：you、perplexity、happyapi
 set ACTIVE_PROVIDER=you
 
 REM 设置是否启用手动登录
