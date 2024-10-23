@@ -187,7 +187,7 @@ class HappyApiProvider {
                     emitter.emit('error', new Error('请求超时'));
                     cleanup();
                 }
-            }, 60000); // 60秒，可根据需要调整
+            }, 60000);
 
             const responseHandler = async (response) => {
                 if (response.url() === targetUrl) {
