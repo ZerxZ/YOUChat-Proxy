@@ -3,11 +3,26 @@
 # 安装依赖包
 npm install
 
+# 设置代理的网站：you、perplexity、happyapi
+export ACTIVE_PROVIDER=you
+
+# 设置是否启用手动登录
+export USE_MANUAL_LOGIN=true
+
+# 是否允许非Pro账户
+export ALLOW_NON_PRO=false
+
+# 设置自定义终止符(用于处理输出停不下来情况，留空则不启用，使用双引号包裹)
+export CUSTOM_END_MARKER="<CHAR_turn>"
+
+# 设置是否启用延迟发送请求，如果设置false卡发送请求尝试打开它
+export ENABLE_DELAY_LOGIC=false
+
 # 设置是否启用隧道访问
 export ENABLE_TUNNEL=false
 
 # 设置隧道类型 (localtunnel 或 ngrok)
-export TUNNEL_TYPE=localtunnel
+export TUNNEL_TYPE=ngrok
 
 # 设置localtunnel子域名(留空则为随机域名)
 export SUBDOMAIN=
@@ -51,8 +66,10 @@ export ENABLE_MODE_ROTATION=false
 # 是否启用隐身模式
 export INCOGNITO_MODE=false
 
+# 设置上传文件格式 (docx 或 txt) gpt_4o 使用txt可能更好破限
+export UPLOAD_FILE_FORMAT=docx
+
 # 运行 Node.js 应用程序
 node index.mjs
 
-echo "按 Enter 键退出..."
-read
+read -p "Press any key to exit..."
