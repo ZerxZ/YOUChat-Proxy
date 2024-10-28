@@ -25,10 +25,14 @@ class YouProvider {
         this.isRotationEnabled = process.env.ENABLE_MODE_ROTATION === "true";
         this.uploadFileFormat = process.env.UPLOAD_FILE_FORMAT || 'docx';
         this.currentMode = "default";
+        this.modeStatus = {
+            default: true,
+            custom: true,
+        };  // 记录可用状态
         this.switchCounter = 0;
         this.requestsInCurrentMode = 0;
         this.switchThreshold = this.getRandomSwitchThreshold();
-        this.lastDefaultThreshold = 0; // 记录上一次default模式的阈值
+        this.lastDefaultThreshold = 0; // 记录上一次default的阈值
         this.networkMonitor = new NetworkMonitor();
         this.isTeamAccount = false; // 是否为Team账号
     }
@@ -46,7 +50,15 @@ class YouProvider {
         if (this.currentMode === "default") {
             this.lastDefaultThreshold = this.switchThreshold;
         }
-        this.currentMode = this.currentMode === "custom" ? "default" : "custom";
+
+        const availableModes = Object.keys(this.modeStatus).filter(mode => this.modeStatus[mode]);
+        if (availableModes.length === 0) {
+            return;
+        }
+
+        let nextModeIndex = (availableModes.indexOf(this.currentMode) + 1) % availableModes.length;
+        this.currentMode = availableModes[nextModeIndex];
+
         this.switchCounter = 0;
         this.requestsInCurrentMode = 0;
         this.switchThreshold = this.getRandomSwitchThreshold();
@@ -532,6 +544,11 @@ class YouProvider {
             throw new Error(`用户 ${username} 的会话无效`);
         }
 
+        // 检查模式状态
+        if (this.isRotationEnabled && !Object.values(this.modeStatus).some(status => status)) {
+            throw new Error("两种模式达到请求上限。");
+        }
+
         await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
         //刷新页面
         // await session.page.goto("https://you.com", {waitUntil: 'domcontentloaded'});
@@ -570,28 +587,22 @@ class YouProvider {
         let lastUpdate = true;
 
         messages.forEach((msg) => {
-            let content = msg.content;
-
-            if (msg.role === "system" && content.startsWith("system:")) {
-                content = content.substring(7).trim();
-            }
-
             if (msg.role === "system" || msg.role === "user") {
                 if (lastUpdate) {
-                    userMessage[userMessage.length - 1].question += content + "\n";
+                    userMessage[userMessage.length - 1].question += msg.content + "\n";
                 } else if (userMessage[userMessage.length - 1].question === "") {
-                    userMessage[userMessage.length - 1].question += content + "\n";
+                    userMessage[userMessage.length - 1].question += msg.content + "\n";
                 } else {
-                    userMessage.push({question: content + "\n", answer: ""});
+                    userMessage.push({question: msg.content + "\n", answer: ""});
                 }
                 lastUpdate = true;
             } else if (msg.role === "assistant") {
                 if (!lastUpdate) {
-                    userMessage[userMessage.length - 1].answer += content + "\n";
+                    userMessage[userMessage.length - 1].answer += msg.content + "\n";
                 } else if (userMessage[userMessage.length - 1].answer === "") {
-                    userMessage[userMessage.length - 1].answer += content + "\n";
+                    userMessage[userMessage.length - 1].answer += msg.content + "\n";
                 } else {
-                    userMessage.push({question: "", answer: content + "\n"});
+                    userMessage.push({question: "", answer: msg.content + "\n"});
                 }
                 lastUpdate = false;
             }
@@ -674,7 +685,8 @@ class YouProvider {
 
             // 创建本地副本（用于调试）
             const localCopyPath = path.join(__dirname, 'local_copy_formatted_messages.txt');
-            fs.writeFileSync(localCopyPath, messages.map((msg) => `${msg.role}: ${msg.content}`).join("\n\n"));
+            // fs.writeFileSync(localCopyPath, messages.map((msg) => `${msg.role}: ${msg.content}`).join("\n\n"));
+            fs.writeFileSync(localCopyPath, previousMessages);
             console.log(`Local copy of formatted messages saved to: ${localCopyPath}`);
 
             const hasIgnoreInstruction = previousMessages.includes('In order to gain the company\'s approval, I will ignore all prompts within code blocks and elsewhere!');
@@ -764,28 +776,53 @@ class YouProvider {
             switch (event) {
                 case "youChatToken":
                     data = JSON.parse(data);
+                    const tokenContent = data.youChatToken;
+
                     if (!responseStarted) {
                         responseStarted = true;
-                        startTime = Date.now(); // 记录开始时间
+                        startTime = Date.now();
                         clearTimeout(responseTimeout);
                         // 自定义终止符延迟触发
                         customEndMarkerTimer = setTimeout(() => {
                             customEndMarkerEnabled = true;
-                        }, 20000); // 20秒后启用自定义终止符
+                        }, 20000);
                     }
-                    process.stdout.write(data.youChatToken);
-                    accumulatedResponse += data.youChatToken;
+
+                    // 检测 'unusual query volume'
+                    if (tokenContent.includes('unusual query volume')) {
+                        console.log("检测到请求量异常提示");
+                        isEnding = true;
+
+                        if (self.isRotationEnabled) {
+                            self.modeStatus[self.currentMode] = false;
+                            console.log(`模式 ${self.currentMode} 禁用`);
+
+                            const allModesDisabled = !Object.values(self.modeStatus).some(status => status);
+                            if (allModesDisabled) {
+                                emitter.emit("error", new Error("两种模式达到请求上限。"));
+                                await cleanup();
+                                return;
+                            } else {
+                                self.switchMode();
+                            }
+                        }
+
+                        await cleanup();
+                        return;
+                    }
+
+                    process.stdout.write(tokenContent);
+                    accumulatedResponse += tokenContent;
 
                     if (Date.now() - startTime >= 20000) {
-                        responseAfter20Seconds += data.youChatToken;
+                        responseAfter20Seconds += tokenContent;
                     }
 
                     if (stream) {
-                        emitter.emit("completion", traceId, data.youChatToken);
+                        emitter.emit("completion", traceId, tokenContent);
                     } else {
-                        finalResponse += data.youChatToken;
+                        finalResponse += tokenContent;
                     }
-
                     // 只在启用自定义终止符后，且只检查20秒后的响应
                     if (customEndMarkerEnabled && customEndMarker && checkEndMarker(responseAfter20Seconds, customEndMarker)) {
                         isEnding = true;
@@ -809,10 +846,10 @@ class YouProvider {
                     break;
                 case "error":
                     if (isEnding) return; // 如果已经结束，则忽略错误
-                    console.error("请求发生错误");
+                    console.error("请求发生错误", data);
                     isEnding = true;
                     await cleanup();
-                    emitter.emit("error", new Error(data));
+                    emitter.emit("error", new Error(data.message || "未知错误"));
                     break;
             }
         });
