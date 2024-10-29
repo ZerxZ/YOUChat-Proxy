@@ -23,6 +23,7 @@ class YouProvider {
         this.preferredBrowser = 'auto';
         this.isCustomModeEnabled = process.env.USE_CUSTOM_MODE === "true";
         this.isRotationEnabled = process.env.ENABLE_MODE_ROTATION === "true";
+        this.rotationEnabled = true;
         this.uploadFileFormat = process.env.UPLOAD_FILE_FORMAT || 'docx';
         this.currentMode = "default";
         this.modeStatus = {
@@ -50,15 +51,7 @@ class YouProvider {
         if (this.currentMode === "default") {
             this.lastDefaultThreshold = this.switchThreshold;
         }
-
-        const availableModes = Object.keys(this.modeStatus).filter(mode => this.modeStatus[mode]);
-        if (availableModes.length === 0) {
-            return;
-        }
-
-        let nextModeIndex = (availableModes.indexOf(this.currentMode) + 1) % availableModes.length;
-        this.currentMode = availableModes[nextModeIndex];
-
+        this.currentMode = this.currentMode === "custom" ? "default" : "custom";
         this.switchCounter = 0;
         this.requestsInCurrentMode = 0;
         this.switchThreshold = this.getRandomSwitchThreshold();
@@ -535,6 +528,27 @@ class YouProvider {
         return result + '.' + this.uploadFileFormat;
     }
 
+    checkAndSwitchMode() {
+        // 如果当前模式不可用，或者达到轮换阈值
+        if (!this.modeStatus[this.currentMode] || (this.rotationEnabled && this.switchCounter >= this.switchThreshold)) {
+            console.log(`当前模式 ${this.currentMode} 已达到请求次数阈值`);
+
+            const availableModes = Object.keys(this.modeStatus).filter(mode => this.modeStatus[mode]);
+
+            if (availableModes.length === 0) {
+                throw new Error("两种模式达到请求上限。");
+            } else if (availableModes.length === 1) {
+                this.currentMode = availableModes[0];
+                this.rotationEnabled = false;
+            } else {
+                this.switchMode();
+            }
+            this.switchCounter = 0;
+            this.requestsInCurrentMode = 0;
+            this.switchThreshold = this.getRandomSwitchThreshold();
+        }
+    }
+
     async getCompletion({username, messages, stream = false, proxyModel, useCustomMode = false}) {
         if (this.networkMonitor.isNetworkBlocked()) {
             throw new Error("网络异常，请稍后再试");
@@ -544,26 +558,22 @@ class YouProvider {
             throw new Error(`用户 ${username} 的会话无效`);
         }
 
-        // 检查模式状态
-        if (this.isRotationEnabled && !Object.values(this.modeStatus).some(status => status)) {
-            throw new Error("两种模式达到请求上限。");
-        }
-
         await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
         //刷新页面
         // await session.page.goto("https://you.com", {waitUntil: 'domcontentloaded'});
 
         const {page, browser} = session;
         const emitter = new EventEmitter();
+
+        // 检查
+        if (this.isRotationEnabled) {
+            this.checkAndSwitchMode();
+        }
         // 处理模式轮换逻辑
-        if (this.isCustomModeEnabled && this.isRotationEnabled) {
+        if (this.isCustomModeEnabled && this.isRotationEnabled && this.rotationEnabled) {
             this.switchCounter++;
             this.requestsInCurrentMode++;
             console.log(`当前模式: ${this.currentMode}, 本模式下的请求次数: ${this.requestsInCurrentMode}, 距离下次切换还有 ${this.switchThreshold - this.switchCounter} 次请求`);
-
-            if (this.switchCounter >= this.switchThreshold) {
-                this.switchMode();
-            }
         }
 
         // 根据轮换状态决定是否使用自定义模式
@@ -795,18 +805,13 @@ class YouProvider {
 
                         if (self.isRotationEnabled) {
                             self.modeStatus[self.currentMode] = false;
-                            console.log(`模式 ${self.currentMode} 禁用`);
 
-                            const allModesDisabled = !Object.values(self.modeStatus).some(status => status);
-                            if (allModesDisabled) {
-                                emitter.emit("error", new Error("两种模式达到请求上限。"));
-                                await cleanup();
-                                return;
-                            } else {
-                                self.switchMode();
-                            }
+                            self.checkAndSwitchMode();
+                            emitter.emit("error", new Error(`模式达到请求上限，已切换模式 ${self.currentMode}，请重试请求。`));
+
+                        } else {
+                            emitter.emit("error", new Error("检测到请求量异常提示，请求终止。"));
                         }
-
                         await cleanup();
                         return;
                     }
