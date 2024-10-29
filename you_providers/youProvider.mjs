@@ -529,23 +529,18 @@ class YouProvider {
     }
 
     checkAndSwitchMode() {
-        // 如果当前模式不可用，或者达到轮换阈值
-        if (!this.modeStatus[this.currentMode] || (this.rotationEnabled && this.switchCounter >= this.switchThreshold)) {
-            console.log(`当前模式 ${this.currentMode} 已达到请求次数阈值`);
+        // 如果当前模式不可用
+        if (!this.modeStatus[this.currentMode]) {
 
             const availableModes = Object.keys(this.modeStatus).filter(mode => this.modeStatus[mode]);
 
             if (availableModes.length === 0) {
-                throw new Error("两种模式达到请求上限。");
+                console.log("两种模式达到请求上限。");
             } else if (availableModes.length === 1) {
+                console.log(`当前模式 ${this.currentMode} 已达到请求次数阈值`);
                 this.currentMode = availableModes[0];
                 this.rotationEnabled = false;
-            } else {
-                this.switchMode();
             }
-            this.switchCounter = 0;
-            this.requestsInCurrentMode = 0;
-            this.switchThreshold = this.getRandomSwitchThreshold();
         }
     }
 
@@ -574,6 +569,9 @@ class YouProvider {
             this.switchCounter++;
             this.requestsInCurrentMode++;
             console.log(`当前模式: ${this.currentMode}, 本模式下的请求次数: ${this.requestsInCurrentMode}, 距离下次切换还有 ${this.switchThreshold - this.switchCounter} 次请求`);
+            if (this.switchCounter >= this.switchThreshold) {
+                this.switchMode();
+            }
         }
 
         // 根据轮换状态决定是否使用自定义模式
