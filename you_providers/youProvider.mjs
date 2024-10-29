@@ -529,14 +529,17 @@ class YouProvider {
     }
 
     checkAndSwitchMode() {
-        const availableModes = Object.keys(this.modeStatus).filter(mode => this.modeStatus[mode]);
+        // 如果当前模式不可用
+        if (!this.modeStatus[this.currentMode]) {
 
-        if (availableModes.length === 0) {
-            console.log("两种模式达到请求上限。");
-        } else if (availableModes.length === 1) {
-            console.log(`当前模式 ${this.currentMode} 已达到请求次数阈值`);
-            this.currentMode = availableModes[0];
-            this.rotationEnabled = false;
+            const availableModes = Object.keys(this.modeStatus).filter(mode => this.modeStatus[mode]);
+
+            if (availableModes.length === 0) {
+                console.warn("两种模式都达到请求上限。");
+            } else if (availableModes.length === 1) {
+                this.currentMode = availableModes[0];
+                this.rotationEnabled = false;
+            }
         }
     }
 
@@ -559,6 +562,9 @@ class YouProvider {
         // 检查
         if (this.isRotationEnabled) {
             this.checkAndSwitchMode();
+            if (!Object.values(this.modeStatus).some(status => status)) {
+                return;
+            }
         }
         // 处理模式轮换逻辑
         if (this.isCustomModeEnabled && this.isRotationEnabled && this.rotationEnabled) {
@@ -568,6 +574,8 @@ class YouProvider {
             if (this.switchCounter >= this.switchThreshold) {
                 this.switchMode();
             }
+        } else {
+            console.log(`当前模式: ${this.currentMode}`);
         }
 
         // 根据轮换状态决定是否使用自定义模式
@@ -774,6 +782,7 @@ class YouProvider {
             }, traceId);
         };
 
+        const self = this;
         page.exposeFunction("callback" + traceId, async (event, data) => {
             if (isEnding) return;
 
@@ -794,20 +803,17 @@ class YouProvider {
 
                     // 检测 'unusual query volume'
                     if (tokenContent.includes('unusual query volume')) {
-                        console.log("检测到请求量异常提示");
-                        isEnding = true;
-
                         if (self.isRotationEnabled) {
                             self.modeStatus[self.currentMode] = false;
 
                             self.checkAndSwitchMode();
-                            emitter.emit("error", new Error(`模式达到请求上限，已切换模式 ${self.currentMode}，请重试请求。`));
-
+                            if (Object.values(self.modeStatus).some(status => status)) {
+                                console.log(`模式达到请求上限，已切换模式 ${self.currentMode}，请重试请求。`);
+                            }
                         } else {
-                            emitter.emit("error", new Error("检测到请求量异常提示，请求终止。"));
+                            console.log("检测到请求量异常提示，请求终止。");
                         }
-                        await cleanup();
-                        return;
+                        isEnding = true;
                     }
 
                     process.stdout.write(tokenContent);
