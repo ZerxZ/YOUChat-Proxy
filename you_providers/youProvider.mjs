@@ -529,18 +529,14 @@ class YouProvider {
     }
 
     checkAndSwitchMode() {
-        // 如果当前模式不可用
-        if (!this.modeStatus[this.currentMode]) {
+        const availableModes = Object.keys(this.modeStatus).filter(mode => this.modeStatus[mode]);
 
-            const availableModes = Object.keys(this.modeStatus).filter(mode => this.modeStatus[mode]);
-
-            if (availableModes.length === 0) {
-                console.log("两种模式达到请求上限。");
-            } else if (availableModes.length === 1) {
-                console.log(`当前模式 ${this.currentMode} 已达到请求次数阈值`);
-                this.currentMode = availableModes[0];
-                this.rotationEnabled = false;
-            }
+        if (availableModes.length === 0) {
+            console.log("两种模式达到请求上限。");
+        } else if (availableModes.length === 1) {
+            console.log(`当前模式 ${this.currentMode} 已达到请求次数阈值`);
+            this.currentMode = availableModes[0];
+            this.rotationEnabled = false;
         }
     }
 
