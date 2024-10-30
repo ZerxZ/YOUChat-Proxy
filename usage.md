@@ -7,7 +7,7 @@
    - Node.js
    - Git
    - Python
-   - Visual C++ Build Tools（[下载链接](https://visualstudio.microsoft.com/zh-hans/visual-cpp-build-tools/)）
+   - Visual C++ Build Tools（[下载链接](https://visualstudio.microsoft.com/zh-hans/visual-cpp-build-tools/)） 和勾上里面的`c++桌面开发`[必须！]
 
 2. **获得一个 You.com 账户并订阅 Pro 或 Team 计划，登录账户。**
 
