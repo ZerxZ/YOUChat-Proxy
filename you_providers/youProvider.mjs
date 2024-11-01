@@ -11,6 +11,7 @@ import {formatMessages} from '../formatMessages.mjs';
 import NetworkMonitor from '../networkMonitor.mjs';
 import robot from 'robotjs';
 import {detectBrowser} from '../utils/browserDetector.mjs';
+import {insertGarbledText} from './garbledText.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -695,6 +696,9 @@ class YouProvider {
             // 将格式化后的消息转换为纯文本
             let previousMessages = formattedMessages.map((msg) => `${msg.role}: ${msg.content}`).join("\n\n");
 
+            // 插入乱码（如果启用）
+            previousMessages = insertGarbledText(previousMessages);
+
             // 创建本地副本（用于调试）
             const localCopyPath = path.join(__dirname, 'local_copy_formatted_messages.txt');
             // fs.writeFileSync(localCopyPath, messages.map((msg) => `${msg.role}: ${msg.content}`).join("\n\n"));
@@ -789,7 +793,10 @@ class YouProvider {
             switch (event) {
                 case "youChatToken":
                     data = JSON.parse(data);
-                    const tokenContent = data.youChatToken;
+                    let tokenContent = data.youChatToken;
+
+                    // 对接收到的内容进行转义处理
+                    tokenContent = unescapeContent(tokenContent);
 
                     if (!responseStarted) {
                         responseStarted = true;
@@ -1091,3 +1098,19 @@ class YouProvider {
 }
 
 export default YouProvider;
+
+function unescapeContent(content) {
+    // 将 \" 替换为 "
+    content = content.replace(/\\"/g, '"');
+
+    // 将 \n 替换为 实际的换行
+    content = content.replace(/\\n/g, '\n');
+
+    // 将 \r 替换为 空字符串
+    content = content.replace(/\\r/g, '');
+
+    // 将 「 和 」 替换为 "
+    content = content.replace(/[「」]/g, '"');
+
+    return content;
+}
