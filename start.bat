@@ -69,6 +69,19 @@ set INCOGNITO_MODE=false
 REM 设置上传文件格式 (docx 或 txt) gpt_4o 使用txt可能更好破限
 set UPLOAD_FILE_FORMAT=docx
 
+REM ---------------------------------------------------
+REM 控制是否在开头插入乱码
+set ENABLE_GARBLED_START=false
+REM 设置开头插入乱码最小长度
+set GARBLED_START_MIN_LENGTH=1000
+REM 设置开头插入乱码最大长度
+set GARBLED_START_MAX_LENGTH=5000
+REM 设置结尾插入乱码固定长度
+set GARBLED_END_LENGTH=500
+REM 控制是否在结尾插入乱码
+set ENABLE_GARBLED_END=false
+REM ---------------------------------------------------
+
 REM 运行 Node.js 应用程序
 node index.mjs
 
