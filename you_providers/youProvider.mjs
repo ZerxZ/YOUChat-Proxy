@@ -1119,7 +1119,7 @@ function unescapeContent(content) {
     content = content.replace(/\\r/g, '');
 
     // 将 「 和 」 替换为 "
-    content = content.replace(/[「」]/g, '"');
+    // content = content.replace(/[「」]/g, '"');
 
     return content;
 }
