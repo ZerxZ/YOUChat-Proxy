@@ -789,6 +789,8 @@ class YouProvider {
             }, traceId);
         };
 
+        // 缓存
+        let buffer = '';
         const self = this;
         page.exposeFunction("callback" + traceId, async (event, data) => {
             if (isEnding) return;
@@ -797,9 +799,14 @@ class YouProvider {
                 case "youChatToken":
                     data = JSON.parse(data);
                     let tokenContent = data.youChatToken;
-
-                    // 对接收到的内容进行转义处理
-                    tokenContent = unescapeContent(tokenContent);
+                    // 将新接收到的内容添加到缓存中
+                    buffer += tokenContent;
+                    if (buffer.endsWith('\\') && !buffer.endsWith('\\\\')) {
+                        // 等待下一个字符
+                        break;
+                    }
+                    let processedContent = unescapeContent(buffer);
+                    buffer = '';
 
                     if (!responseStarted) {
                         responseStarted = true;
@@ -812,7 +819,7 @@ class YouProvider {
                     }
 
                     // 检测 'unusual query volume'
-                    if (tokenContent.includes('unusual query volume')) {
+                    if (processedContent.includes('unusual query volume')) {
                         if (self.isRotationEnabled) {
                             self.modeStatus[self.currentMode] = false;
 
@@ -826,17 +833,17 @@ class YouProvider {
                         isEnding = true;
                     }
 
-                    process.stdout.write(tokenContent);
-                    accumulatedResponse += tokenContent;
+                    process.stdout.write(processedContent);
+                    accumulatedResponse += processedContent;
 
                     if (Date.now() - startTime >= 20000) {
-                        responseAfter20Seconds += tokenContent;
+                        responseAfter20Seconds += processedContent;
                     }
 
                     if (stream) {
-                        emitter.emit("completion", traceId, tokenContent);
+                        emitter.emit("completion", traceId, processedContent);
                     } else {
-                        finalResponse += tokenContent;
+                        finalResponse += processedContent;
                     }
                     // 只在启用自定义终止符后，且只检查20秒后的响应
                     if (customEndMarkerEnabled && customEndMarker && checkEndMarker(responseAfter20Seconds, customEndMarker)) {
@@ -1103,20 +1110,16 @@ class YouProvider {
 export default YouProvider;
 
 function unescapeContent(content) {
-    try {
-        return JSON.parse(`"${content.replace(/"/g, '\\"')}"`);
-    } catch (e) {
-        // 将 \" 替换为 "
-        content = content.replace(/\\"/g, '"');
-        
-        content = content.replace(/\\n/g, '');
+    // 将 \" 替换为 "
+    content = content.replace(/\\"/g, '"');
 
-        // 将 \r 替换为空字符
-        content = content.replace(/\\r/g, '');
+    content = content.replace(/\\n/g, '');
 
-        // 将 「 和 」 替换为 "
-        content = content.replace(/[「」]/g, '"');
+    // 将 \r 替换为空字符
+    content = content.replace(/\\r/g, '');
 
-        return content;
-    }
+    // 将 「 和 」 替换为 "
+    content = content.replace(/[「」]/g, '"');
+
+    return content;
 }
