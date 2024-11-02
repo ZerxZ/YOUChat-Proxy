@@ -564,7 +564,10 @@ class YouProvider {
         if (this.isRotationEnabled) {
             this.checkAndSwitchMode();
             if (!Object.values(this.modeStatus).some(status => status)) {
-                return;
+                this.modeStatus.default = true;
+                this.modeStatus.custom = true;
+                this.currentMode = "default";
+                console.log("两种模式都达到请求上限，重置记录状态。");
             }
         }
         // 处理模式轮换逻辑
@@ -1100,17 +1103,20 @@ class YouProvider {
 export default YouProvider;
 
 function unescapeContent(content) {
-    // 将 \" 替换为 "
-    content = content.replace(/\\"/g, '"');
+    try {
+        return JSON.parse(`"${content.replace(/"/g, '\\"')}"`);
+    } catch (e) {
+        // 将 \" 替换为 "
+        content = content.replace(/\\"/g, '"');
+        
+        content = content.replace(/\\n/g, '');
 
-    // 将 \n 替换为 实际的换行
-    content = content.replace(/\\n/g, '\n');
+        // 将 \r 替换为空字符
+        content = content.replace(/\\r/g, '');
 
-    // 将 \r 替换为 空字符串
-    content = content.replace(/\\r/g, '');
+        // 将 「 和 」 替换为 "
+        content = content.replace(/[「」]/g, '"');
 
-    // 将 「 和 」 替换为 "
-    content = content.replace(/[「」]/g, '"');
-
-    return content;
+        return content;
+    }
 }
