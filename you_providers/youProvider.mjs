@@ -130,6 +130,12 @@ class YouProvider {
                     customConfig: {
                         userDataDir: path.join(__dirname, "browser_profiles", currentUsername),
                         executablePath: browserPath,
+                        args: [
+                            '--remote-debugging-address=127.0.0.1',
+                            '--disable-ipv6',
+                            '--no-sandbox',
+                            '--disable-setuid-sandbox',
+                        ],
                     },
                 });
 
@@ -255,6 +261,7 @@ class YouProvider {
             } catch (e) {
                 console.error(`初始化浏览器失败 (${currentUsername})`);
                 console.error(e);
+                await browser?.close();
             }
         }
 
