@@ -69,6 +69,19 @@ export INCOGNITO_MODE=false
 # 设置上传文件格式 (docx 或 txt) gpt_4o 使用txt可能更好破限
 export UPLOAD_FILE_FORMAT=docx
 
+# ---------------------------------------------------
+# 控制是否在开头插入乱码
+export ENABLE_GARBLED_START=false
+# 设置开头插入乱码最小长度
+export GARBLED_START_MIN_LENGTH=1000
+# 设置开头插入乱码最大长度
+export GARBLED_START_MAX_LENGTH=5000
+# 设置结尾插入乱码固定长度
+export GARBLED_END_LENGTH=500
+# 控制是否在结尾插入乱码
+export ENABLE_GARBLED_END=false
+# ---------------------------------------------------
+
 # 运行 Node.js 应用程序
 node index.mjs
 
