@@ -896,13 +896,15 @@ class YouProvider {
         req_param.append("queryTraceId", traceId);
         req_param.append("use_personalization_extraction", "false");
         req_param.append("domain", "youchat");
-        req_param.append("mkt", "ja-JP");
-        if (uploadedFile)
-            req_param.append("userFiles", JSON.stringify([{
+        req_param.append("mkt", "zh-HK");
+        if (uploadedFile) {
+            req_param.append("sources", JSON.stringify([{
+                source_type: "user_file",
                 user_filename: randomFileName,
                 filename: uploadedFile.filename,
-                size: messageBuffer.length
+                size_bytes: messageBuffer.length
             }]));
+        }
         req_param.append("chat", JSON.stringify(userMessage));
         const url = "https://you.com/api/streamingSearch?" + req_param.toString();
         const enableDelayLogic = process.env.ENABLE_DELAY_LOGIC === 'true'; // 是否启用延迟逻辑
