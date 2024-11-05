@@ -858,7 +858,7 @@ class YouProvider {
                         setTimeout(async () => {
                             await cleanup();
                             emitter.emit(stream ? "end" : "completion", traceId, stream ? undefined : finalResponse);
-                        }, 2000);
+                        }, 1000);
                     }
                     break;
                 case "customEndMarkerEnabled":
@@ -1068,6 +1068,39 @@ class YouProvider {
                 customEndMarker
             );
         }
+        // 重新发送请求
+        async function resendPreviousRequest() {
+            try {
+                // 清理之前的事件
+                await cleanup();
+
+                // 重置状态
+                isEnding = false;
+                responseStarted = false;
+                startTime = null;
+                accumulatedResponse = '';
+                responseAfter20Seconds = '';
+                buffer = '';
+                customEndMarkerEnabled = false;
+
+                clearTimeout(responseTimeout);
+
+                responseTimeout = setTimeout(async () => {
+                    if (!responseStarted) {
+                        console.log("重试请求后仍未收到响应，终止请求");
+                        emitter.emit("warning", new Error("在重试后仍未收到响应"));
+                        emitter.emit("end", traceId);
+                    }
+                }, 60000);
+
+                await setupEventSource(page, url, traceId, customEndMarker);
+
+                return true;
+            } catch (error) {
+                console.error("重新发送请求时发生错误:", error);
+                return false;
+            }
+        }
 
         try {
             const connectionEstablished = await delayedRequestWithRetry();
@@ -1082,13 +1115,17 @@ class YouProvider {
                 await page.goto(`https://you.com/search?q=&fromSearchBar=true&tbm=youchat&chatMode=custom`, {waitUntil: "domcontentloaded"});
             }
 
-            responseTimeout = setTimeout(() => {
+            responseTimeout = setTimeout(async () => {
                 if (!responseStarted) {
-                    console.log("50秒内没有收到响应，终止请求");
-                    emitter.emit("warning", new Error("No response received within 40 seconds"));
-                    emitter.emit("end", traceId);
+                    console.log("60秒内没有收到响应，尝试重新发送请求");
+                    const retrySuccess = await resendPreviousRequest();
+                    if (!retrySuccess) {
+                        console.log("重试请求时发生错误，终止请求");
+                        emitter.emit("warning", new Error("重试请求时发生错误"));
+                        emitter.emit("end", traceId);
+                    }
                 }
-            }, 50000);
+            }, 60000);
 
             // 初始执行 setupEventSource
             await setupEventSource(page, url, traceId, customEndMarker);
