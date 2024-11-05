@@ -560,7 +560,7 @@ class YouProvider {
 
         await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
         //刷新页面
-        // await session.page.goto("https://you.com", {waitUntil: 'domcontentloaded'});
+        await session.page.goto("https://you.com", {waitUntil: 'domcontentloaded'});
 
         const {page, browser} = session;
         const emitter = new EventEmitter();
