@@ -886,17 +886,15 @@ class YouProvider {
         req_param.append("page", "1");
         req_param.append("count", "10");
         req_param.append("safeSearch", "Off");
-        req_param.append("q", userQuery);
-        req_param.append("chatId", traceId);
-        req_param.append("traceId", `${traceId}|${msgid}|${new Date().toISOString()}`);
-        req_param.append("conversationTurnId", msgid);
-        if (userChatModeId === "custom") req_param.append("selectedAiModel", proxyModel);
-        req_param.append("selectedChatMode", userChatModeId);
-        req_param.append("pastChatLength", userMessage.length.toString());
-        req_param.append("queryTraceId", traceId);
-        req_param.append("use_personalization_extraction", "false");
-        req_param.append("domain", "youchat");
         req_param.append("mkt", "zh-HK");
+        req_param.append("enable_worklow_generation_ux", "false");
+        req_param.append("domain", "youchat");
+        req_param.append("use_personalization_extraction", "false");
+        req_param.append("queryTraceId", traceId);
+        req_param.append("chatId", traceId);
+        req_param.append("conversationTurnId", msgid);
+        req_param.append("pastChatLength", userMessage.length.toString());
+        req_param.append("selectedChatMode", userChatModeId);
         if (uploadedFile) {
             req_param.append("sources", JSON.stringify([{
                 source_type: "user_file",
@@ -905,6 +903,10 @@ class YouProvider {
                 size_bytes: messageBuffer.length
             }]));
         }
+        if (userChatModeId === "custom") req_param.append("selectedAiModel", proxyModel);
+        req_param.append("enable_agent_clarification_questions", "false");
+        req_param.append("traceId", `${traceId}|${msgid}|${new Date().toISOString()}`);
+        req_param.append("q", userQuery);
         req_param.append("chat", JSON.stringify(userMessage));
         const url = "https://you.com/api/streamingSearch?" + req_param.toString();
         const enableDelayLogic = process.env.ENABLE_DELAY_LOGIC === 'true'; // 是否启用延迟逻辑
