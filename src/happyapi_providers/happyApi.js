@@ -1,12 +1,12 @@
-import {EventEmitter} from "events";
-import {connect} from "puppeteer-real-browser";
-import {v4 as uuidV4} from "uuid";
-import path from "path";
-import {fileURLToPath} from "url";
-import {createDirectoryIfNotExists, sleep} from "../utils.mjs";
-import '../proxyAgent.mjs';
-import NetworkMonitor from "../networkMonitor.mjs";
-import {detectBrowser} from "../utils/browserDetector.mjs";
+import { EventEmitter } from "node:events";
+import { connect } from "puppeteer-real-browser";
+import { v4 as uuidV4 } from "uuid";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createDirectoryIfNotExists, sleep } from "../utils.js";
+import '../proxyAgent.js';
+import NetworkMonitor from "../networkMonitor.js";
+import { detectBrowser } from "../utils/browserDetector.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,15 +40,15 @@ class HappyApiProvider {
                 },
             });
 
-            const {page, browser} = response;
+            const { page, browser } = response;
 
             console.log(`请在打开的浏览器窗口中手动登录 happyapi.org`);
-            await page.goto("https://happyapi.org", {waitUntil: 'networkidle0'});
+            await page.goto("https://happyapi.org", { waitUntil: 'networkidle0' });
             await sleep(3000); // 等待页面加载完毕
 
             const sessionCookie = await this.waitForManualLogin(page);
             if (sessionCookie) {
-                this.sessions[currentUsername] = {browser, page, sessionCookie, valid: true};
+                this.sessions[currentUsername] = { browser, page, sessionCookie, valid: true };
                 console.log(`成功获取会话 cookie`);
             } else {
                 console.error(`未能检测到登录状态，请确保已成功登录`);
@@ -123,7 +123,7 @@ class HappyApiProvider {
 
     async checkLoginStatus(page) {
         try {
-            const userNameElement = await page.waitForSelector('div.self-center.font-medium', {timeout: 5000});
+            const userNameElement = await page.waitForSelector('div.self-center.font-medium', { timeout: 5000 });
             const userName = await page.evaluate(element => element.textContent, userNameElement);
             return true;
         } catch {
@@ -131,15 +131,15 @@ class HappyApiProvider {
         }
     }
 
-    async getCompletion({username, messages, stream = false, proxyModel}) {
+    async getCompletion({ username, messages, stream = false, proxyModel }) {
         const session = this.sessions[username];
         if (!session || !session.valid) {
             throw new Error(`用户 ${username} 的会话无效`);
         }
         //刷新页面
-        await session.page.goto("https://happyapi.org", {waitUntil: 'domcontentloaded'});
+        await session.page.goto("https://happyapi.org", { waitUntil: 'domcontentloaded' });
 
-        const {page} = session;
+        const { page } = session;
         const emitter = new EventEmitter();
 
         try {
@@ -150,21 +150,21 @@ class HappyApiProvider {
             const sendButtonSelector = 'button#send-message-button';
 
             // 输入消息
-            await page.waitForSelector(inputSelector, {visible: true});
+            await page.waitForSelector(inputSelector, { visible: true });
 
             await page.evaluate((selector, message) => {
                 const textarea = document.querySelector(selector);
                 textarea.value = message;
 
                 // 手动触发事件
-                textarea.dispatchEvent(new Event('input', {bubbles: true}));
-                textarea.dispatchEvent(new Event('change', {bubbles: true}));
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                textarea.dispatchEvent(new Event('change', { bubbles: true }));
             }, inputSelector, userQuery.trim());
 
             await page.waitForTimeout(100);
 
             // 点击发送按钮
-            await page.waitForSelector(sendButtonSelector, {visible: true});
+            await page.waitForSelector(sendButtonSelector, { visible: true });
             await page.click(sendButtonSelector);
 
             // 监听请求

@@ -1,27 +1,32 @@
 {
-  "name": "youchat-proxy",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "cookie": "^0.6.0",
-    "docx": "^8.5.0",
-    "express": "^4.19.2",
-    "form-data": "^4.0.0",
-    "puppeteer-real-browser": "1.2.18",
-    "uuid": "^9.0.1",
-    "localtunnel": "^2.0.2",
-    "socks-proxy-agent": "^8.0.4",
-    "https-proxy-agent": "^7.0.5",
-    "ngrok": "^5.0.0-beta.2",
-    "node-fetch": "^3.3.2",
-    "robotjs": "^0.6.0",
-    "socket.io-client": "^4.8.0",
-    "crypto-js": "^4.2.0"
-  }
+	"name": "youchat-proxy",
+	"version": "1.0.0",
+	"description": "",
+	"main": "src/index.js",
+	"type": "module",
+	"scripts": {
+		"bun": "bun run ./src/index.js",
+		"node": "node ./src/index.js",
+		"deno": "deno run --allow-net --allow-read --unstable-sloppy-imports ./src/index.js "
+	},
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"cookie": "^0.6.0",
+		"docx": "^8.6.0",
+		"express": "^4.21.1",
+		"form-data": "^4.0.1",
+		"puppeteer-real-browser": "1.2.18",
+		"uuid": "^9.0.1",
+		"localtunnel": "^2.0.2",
+		"socks-proxy-agent": "^8.0.4",
+		"https-proxy-agent": "^7.0.5",
+		"ngrok": "^5.0.0-beta.2",
+		"node-fetch": "^3.3.2",
+		"socket.io-client": "^4.8.1",
+		"crypto-js": "^4.2.0"
+	},
+	"devDependencies": {
+		"dotenv": "^16.4.5"
+	}
 }

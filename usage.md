@@ -4,10 +4,9 @@
 
 1. **安装必要的软件：**
 
-   - Node.js
+   - Node.js 或 BunJS 或 Deno
    - Git
    - Python
-   - Visual C++ Build Tools（[下载链接](https://visualstudio.microsoft.com/zh-hans/visual-cpp-build-tools/)） 和勾上里面的`c++桌面开发`[必须！]
 
 2. **获得一个 You.com 账户并订阅 Pro 或 Team 计划，登录账户。**
 
@@ -37,24 +36,14 @@
 
 1. **下载或克隆本项目代码，解压缩。**
 
-2. **编辑 `config.example.mjs` 文件，将上一步获取的 Cookie 粘贴进去。**
+2. **编辑 `.env` 文件，将上一步获取的 Cookie 粘贴进去。**
 
-   如果有多个 Cookie，按照以下格式添加，然后将文件另存为 `config.mjs`：
+   ```ini
+   # YOU 曲奇
+   YOU_COOKIE=cookie1,cookie2,cookie3
 
-   ```javascript
-   export const config = {
-       "sessions": [
-           {
-               "cookie": `cookie1`
-           },
-           {
-               "cookie": `cookie2`
-           },
-           {
-               "cookie": `cookie3`
-           }
-       ]
-   }
+   # PERPLEXITY 曲奇
+   PERPLEXITY_COOKIE=cookie1,cookie2,cookie3
    ```
 
 #### 步骤 3：配置环境变量
@@ -332,9 +321,9 @@ This project is for learning and research purposes only. Please comply with rele
 
 1. **Download or clone this project code, unzip.**
 
-2. **Edit `config.example.mjs` file, paste the Cookie obtained in the previous step.**
+2. **Edit `config.example.js` file, paste the Cookie obtained in the previous step.**
 
-   If there are multiple Cookies, add them in the following format, then save the file as `config.mjs`:
+   If there are multiple Cookies, add them in the following format, then save the file as `config.js`:
 
    ```javascript
    export const config = {

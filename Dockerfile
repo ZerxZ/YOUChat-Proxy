@@ -34,4 +34,4 @@ EXPOSE 8080
 
 # Command to run the application
 
-CMD [ "node", "index.mjs" ]
+CMD [ "node", "index.js" ]

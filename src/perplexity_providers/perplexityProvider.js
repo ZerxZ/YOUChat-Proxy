@@ -1,12 +1,12 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import { connect } from "puppeteer-real-browser";
 import { v4 as uuidV4 } from "uuid";
-import path from "path";
-import { fileURLToPath } from "url";
-import { createDirectoryIfNotExists, sleep, extractPerplexityCookie, getPerplexitySessionCookie } from "../utils.mjs";
-import '../proxyAgent.mjs';
-import { detectBrowser } from '../utils/browserDetector.mjs';
-import NetworkMonitor from '../networkMonitor.mjs';
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createDirectoryIfNotExists, sleep, extractPerplexityCookie, getPerplexitySessionCookie } from "../utils.js";
+import '../proxyAgent.js';
+import { detectBrowser } from '../utils/browserDetector.js';
+import NetworkMonitor from '../networkMonitor.js';
 import io from 'socket.io-client';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,9 +22,9 @@ class PerplexityProvider {
 
     async init(config) {
         console.log(`本项目依赖Chrome或Edge浏览器，请勿关闭弹出的浏览器窗口。如果出现错误请检查是否已安装Chrome或Edge浏览器。`);
-        
+
         const browserPath = detectBrowser(this.preferredBrowser); // 检测Chrome和Edge浏览器
-        
+
         this.sessions = {};
         const timeout = 120000;
 
@@ -33,7 +33,7 @@ class PerplexityProvider {
                 configIndex: 0,
                 valid: false,
             };
-            console.log("当前使用手动登录模式，跳过config.mjs文件中的 cookie 验证");
+            console.log("当前使用手动登录模式，跳过config.js文件中的 cookie 验证");
         } else {
             // 使用配置文件中的 cookie
             for (let index = 0; index < config.sessions.length; index++) {
@@ -71,10 +71,10 @@ class PerplexityProvider {
                     },
                 });
 
-                const {page, browser} = response;
+                const { page, browser } = response;
                 if (process.env.USE_MANUAL_LOGIN === "true") {
                     console.log(`正在为 session #${session.configIndex} 进行手动登录...`);
-                    await page.goto("https://www.perplexity.ai", {timeout: timeout});
+                    await page.goto("https://www.perplexity.ai", { timeout: timeout });
                     await sleep(3000);
                     console.log(`请在打开的浏览器窗口中手动登录 Perplexity.ai (session #${session.configIndex})`);
                     const { sessionCookie, accountStatus } = await this.waitForManualLogin(page);
@@ -100,7 +100,7 @@ class PerplexityProvider {
                     // 使用已有的 cookie
                     const perplexityCookies = getPerplexitySessionCookie(session);
                     await page.setCookie(...perplexityCookies);
-                    await page.goto("https://www.perplexity.ai", {timeout: timeout});
+                    await page.goto("https://www.perplexity.ai", { timeout: timeout });
                     await sleep(5000);
                 }
 

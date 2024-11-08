@@ -1,7 +1,7 @@
-import os from 'os';
-import fs from 'fs';
-import path from 'path';
-import { execSync } from 'child_process';
+import os from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
 
 export function detectBrowser(preferredBrowser = 'auto') {
     const platform = os.platform();

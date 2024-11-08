@@ -1,17 +1,16 @@
-import {EventEmitter} from "events";
-import {connect} from "puppeteer-real-browser";
-import {v4 as uuidV4} from "uuid";
-import path from "path";
-import fs from "fs";
-import {fileURLToPath} from "url";
-import {createDirectoryIfNotExists, createDocx, extractCookie, getSessionCookie, sleep} from "../utils.mjs";
-import {exec} from 'child_process';
-import '../proxyAgent.mjs';
-import {formatMessages} from '../formatMessages.mjs';
-import NetworkMonitor from '../networkMonitor.mjs';
-import robot from 'robotjs';
-import {detectBrowser} from '../utils/browserDetector.mjs';
-import {insertGarbledText} from './garbledText.mjs';
+import { EventEmitter } from "node:events";
+import { connect } from "puppeteer-real-browser";
+import { v4 as uuidV4 } from "uuid";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { createDirectoryIfNotExists, createDocx, extractCookie, getSessionCookie, sleep } from "../utils.js";
+import { exec } from 'node:child_process';
+import '../proxyAgent.js';
+import { formatMessages } from '../formatMessages.js';
+import NetworkMonitor from '../networkMonitor.js';;
+import { detectBrowser } from '../utils/browserDetector.js';
+import { insertGarbledText } from './garbledText.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,12 +72,12 @@ class YouProvider {
                 configIndex: 0,
                 valid: false,
             };
-            console.log("当前使用手动登录模式，跳过config.mjs文件中的 cookie 验证");
+            console.log("当前使用手动登录模式，跳过config.js文件中的 cookie 验证");
         } else {
             // 使用配置文件中的 cookie
             for (let index = 0; index < config.sessions.length; index++) {
                 const session = config.sessions[index];
-                const {jwtSession, jwtToken, ds, dsr} = extractCookie(session.cookie);
+                const { jwtSession, jwtToken, ds, dsr } = extractCookie(session.cookie);
                 if (jwtSession && jwtToken) {
                     // 旧版cookie处理
                     try {
@@ -137,14 +136,14 @@ class YouProvider {
                     },
                 });
 
-                const {page, browser} = response;
+                const { page, browser } = response;
                 if (process.env.USE_MANUAL_LOGIN === "true") {
                     console.log(`正在为 session #${session.configIndex} 进行手动登录...`);
-                    await page.goto("https://you.com", {timeout: timeout});
+                    await page.goto("https://you.com", { timeout: timeout });
                     // 等待页面加载完毕
                     await sleep(3000);
                     console.log(`请在打开的浏览器窗口中手动登录 You.com (session #${session.configIndex})`);
-                    const {loginInfo, sessionCookie} = await this.waitForManualLogin(page);
+                    const { loginInfo, sessionCookie } = await this.waitForManualLogin(page);
                     if (sessionCookie) {
                         const email = loginInfo || sessionCookie.email;
                         this.sessions[email] = {
@@ -170,7 +169,7 @@ class YouProvider {
                         session.ds,
                         session.dsr
                     ));
-                    await page.goto("https://you.com", {timeout: timeout});
+                    await page.goto("https://you.com", { timeout: timeout });
                     await sleep(5000); // 等待加载完毕
                 }
 
@@ -183,13 +182,17 @@ class YouProvider {
                 if (this.isTeamAccount) {
                     console.log('检测到 Team 账号');
                     await sleep(3000);
-                    await page.goto("https://you.com/settings/team-details", {timeout: timeout});
+                    await page.goto("https://you.com/settings/team-details", { timeout: timeout });
                     await sleep(3000);
                     // 获取浏览器窗口标题
                     const title = await page.title();
                     // 将浏览器窗口切换到前台
                     await this.focusBrowserWindow(title);
-                    robot.keyTap('r', 'control');
+                    // 同时按下 Ctrl + r 刷新页面
+                    await page.keyboard.down('Control');
+                    await page.keyboard.press('KeyR');
+                    await page.keyboard.up('Control');
+                    // 等待页面加载完毕
                     await sleep(5000);
                 }
 
@@ -456,7 +459,7 @@ class YouProvider {
                         await page.setCookie(...sessionCookie);
                     }
 
-                    resolve({loginInfo, sessionCookie});
+                    resolve({ loginInfo, sessionCookie });
                 } else {
                     setTimeout(checkLoginStatus, 1000);
                 }
@@ -472,7 +475,7 @@ class YouProvider {
                         await page.setCookie(...sessionCookie);
                     }
 
-                    resolve({loginInfo: null, sessionCookie});
+                    resolve({ loginInfo: null, sessionCookie });
                 }
             });
 
@@ -549,7 +552,7 @@ class YouProvider {
         }
     }
 
-    async getCompletion({username, messages, stream = false, proxyModel, useCustomMode = false}) {
+    async getCompletion({ username, messages, stream = false, proxyModel, useCustomMode = false }) {
         if (this.networkMonitor.isNetworkBlocked()) {
             throw new Error("网络异常，请稍后再试");
         }
@@ -560,9 +563,9 @@ class YouProvider {
 
         await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
         //刷新页面
-        await session.page.goto("https://you.com", {waitUntil: 'domcontentloaded'});
+        await session.page.goto("https://you.com", { waitUntil: 'domcontentloaded' });
 
-        const {page, browser} = session;
+        const { page, browser } = session;
         const emitter = new EventEmitter();
 
         // 检查
@@ -597,13 +600,13 @@ class YouProvider {
 
         if (!isLoaded) {
             console.log('页面尚未加载完成，等待加载...');
-            await page.waitForNavigation({waitUntil: 'domcontentloaded', timeout: 10000}).catch(() => {
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {
                 console.log('页面加载超时，继续执行');
             });
         }
 
         // 计算用户消息长度
-        let userMessage = [{question: "", answer: ""}];
+        let userMessage = [{ question: "", answer: "" }];
         let userQuery = "";
         let lastUpdate = true;
 
@@ -614,7 +617,7 @@ class YouProvider {
                 } else if (userMessage[userMessage.length - 1].question === "") {
                     userMessage[userMessage.length - 1].question += msg.content + "\n";
                 } else {
-                    userMessage.push({question: msg.content + "\n", answer: ""});
+                    userMessage.push({ question: msg.content + "\n", answer: "" });
                 }
                 lastUpdate = true;
             } else if (msg.role === "assistant") {
@@ -623,7 +626,7 @@ class YouProvider {
                 } else if (userMessage[userMessage.length - 1].answer === "") {
                     userMessage[userMessage.length - 1].answer += msg.content + "\n";
                 } else {
-                    userMessage.push({question: "", answer: msg.content + "\n"});
+                    userMessage.push({ question: "", answer: msg.content + "\n" });
                 }
                 lastUpdate = false;
             }
@@ -644,7 +647,8 @@ class YouProvider {
                 // 为当前用户创建新的记录
                 this.config.sessions[session.configIndex].user_chat_mode_id[username] = {};
                 // 写回config
-                fs.writeFileSync("./config.mjs", "export const config = " + JSON.stringify(this.config, null, 4));
+                fs.writeFileSync(path.resolve(process.cwd(), 'you.config.json'), JSON.stringify(this.config, null, 2));
+
                 console.log(`Created new record for user: ${username}`);
             }
 
@@ -677,8 +681,8 @@ class YouProvider {
                 );
                 if (userChatMode.chat_mode_id) {
                     this.config.sessions[session.configIndex].user_chat_mode_id[username][proxyModel] = userChatMode.chat_mode_id;
-                    // 写回config
-                    fs.writeFileSync("./config.mjs", "export const config = " + JSON.stringify(this.config, null, 4));
+                    // 写回.config
+                    fs.writeFileSync(path.resolve(process.cwd(), 'you.config.json'), JSON.stringify(this.config, null, 2));
                     console.log(`Created new chat mode for user ${username} and model ${proxyModel}`);
                 } else {
                     if (userChatMode.error) console.log(userChatMode.error);
@@ -912,7 +916,7 @@ class YouProvider {
         const enableDelayLogic = process.env.ENABLE_DELAY_LOGIC === 'true'; // 是否启用延迟逻辑
 
         if (enableDelayLogic) {
-            await page.goto(`https://you.com/search?q=&fromSearchBar=true&tbm=youchat&chatMode=custom`, {waitUntil: "domcontentloaded"});
+            await page.goto(`https://you.com/search?q=&fromSearchBar=true&tbm=youchat&chatMode=custom`, { waitUntil: "domcontentloaded" });
         }
 
         // 检查连接状态和盾拦截
@@ -930,7 +934,7 @@ class YouProvider {
                             clearTimeout(timeoutId);
                             // 读取响应的前几个字节，确保连接已经建立
                             const reader = res.body.getReader();
-                            const {done} = await reader.read();
+                            const { done } = await reader.read();
                             if (!done) {
                                 await reader.cancel();
                             }
@@ -949,12 +953,12 @@ class YouProvider {
                 ]);
 
                 if (response.status === 403 && response.headers['cf-chl-bypass']) {
-                    return {connected: false, cloudflareDetected: true};
+                    return { connected: false, cloudflareDetected: true };
                 }
-                return {connected: true, cloudflareDetected: false};
+                return { connected: true, cloudflareDetected: false };
             } catch (error) {
                 console.error("Connection check error:", error);
-                return {connected: false, cloudflareDetected: false, error: error.message};
+                return { connected: false, cloudflareDetected: false, error: error.message };
             }
         }
 
@@ -972,7 +976,7 @@ class YouProvider {
                     await new Promise(resolve => setTimeout(resolve, 5000)); // 5秒延迟
                     console.log(`尝试发送请求 (尝试 ${attempt}/${maxRetries})`);
 
-                    const {connected, cloudflareDetected, error} = await checkConnectionAndCloudflare(page);
+                    const { connected, cloudflareDetected, error } = await checkConnectionAndCloudflare(page);
 
                     if (connected) {
                         console.log("连接成功，准备唤醒浏览器");
@@ -1059,8 +1063,8 @@ class YouProvider {
                         }
                         evtSource.close();
                         fetch("https://you.com/api/chat/deleteChat", {
-                            headers: {"content-type": "application/json"},
-                            body: JSON.stringify({chatId: traceId}),
+                            headers: { "content-type": "application/json" },
+                            body: JSON.stringify({ chatId: traceId }),
                             method: "DELETE",
                         });
                     };
@@ -1114,7 +1118,7 @@ class YouProvider {
             }
 
             if (!enableDelayLogic) {
-                await page.goto(`https://you.com/search?q=&fromSearchBar=true&tbm=youchat&chatMode=custom`, {waitUntil: "domcontentloaded"});
+                await page.goto(`https://you.com/search?q=&fromSearchBar=true&tbm=youchat&chatMode=custom`, { waitUntil: "domcontentloaded" });
             }
 
             responseTimeout = setTimeout(async () => {
@@ -1149,7 +1153,7 @@ class YouProvider {
             }, traceId).catch(console.error);
         };
 
-        return {completion: emitter, cancel};
+        return { completion: emitter, cancel };
     }
 }
 

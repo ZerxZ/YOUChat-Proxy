@@ -1,89 +1,89 @@
-@echo off
+ï»¿@echo off
 
-REM °²×°ÒÀÀµ°ü
+REM å®‰è£…ä¾èµ–åŒ…
 call npm install
 
-REM ÉèÖÃ´úÀíµÄÍøÕ¾£ºyou¡¢perplexity¡¢happyapi
+REM è®¾ç½®ä»£ç†çš„ç½‘ç«™ï¼šyouã€perplexityã€happyapi
 set ACTIVE_PROVIDER=you
 
-REM ÉèÖÃÊÇ·ñÆôÓÃÊÖ¶¯µÇÂ¼
+REM è®¾ç½®æ˜¯å¦å¯ç”¨æ‰‹åŠ¨ç™»å½•
 set USE_MANUAL_LOGIN=true
 
-REM ÊÇ·ñÔÊÐí·ÇProÕË»§
+REM æ˜¯å¦å…è®¸éžProè´¦æˆ·
 set ALLOW_NON_PRO=false
 
-REM ÉèÖÃ×Ô¶¨ÒåÖÕÖ¹·û(ÓÃÓÚ´¦ÀíÊä³öÍ£²»ÏÂÀ´Çé¿ö£¬Áô¿ÕÔò²»ÆôÓÃ£¬Ê¹ÓÃË«ÒýºÅ°ü¹ü)
+REM è®¾ç½®è‡ªå®šä¹‰ç»ˆæ­¢ç¬¦(ç”¨äºŽå¤„ç†è¾“å‡ºåœä¸ä¸‹æ¥æƒ…å†µï¼Œç•™ç©ºåˆ™ä¸å¯ç”¨ï¼Œä½¿ç”¨åŒå¼•å·åŒ…è£¹)
 set CUSTOM_END_MARKER="<CHAR_turn>"
 
-REM ÉèÖÃÊÇ·ñÆôÓÃÑÓ³Ù·¢ËÍÇëÇó£¬Èç¹ûÉèÖÃfalse¿¨·¢ËÍÇëÇó³¢ÊÔ´ò¿ªËü
+REM è®¾ç½®æ˜¯å¦å¯ç”¨å»¶è¿Ÿå‘é€è¯·æ±‚ï¼Œå¦‚æžœè®¾ç½®falseå¡å‘é€è¯·æ±‚å°è¯•æ‰“å¼€å®ƒ
 set ENABLE_DELAY_LOGIC=false
 
-REM ÉèÖÃÊÇ·ñÆôÓÃËíµÀ·ÃÎÊ
+REM è®¾ç½®æ˜¯å¦å¯ç”¨éš§é“è®¿é—®
 set ENABLE_TUNNEL=false
 
-REM ÉèÖÃËíµÀÀàÐÍ (localtunnel »ò ngrok)
+REM è®¾ç½®éš§é“ç±»åž‹ (localtunnel æˆ– ngrok)
 set TUNNEL_TYPE=ngrok
 
-REM ÉèÖÃlocaltunnel×ÓÓòÃû(Áô¿ÕÔòÎªËæ»úÓòÃû)
+REM è®¾ç½®localtunnelå­åŸŸå(ç•™ç©ºåˆ™ä¸ºéšæœºåŸŸå)
 set SUBDOMAIN=
 
-REM ÉèÖÃ ngrok AUTH TOKEN
-REM ÕâÊÇ ngrok ÕË»§µÄÉí·ÝÑéÖ¤ÁîÅÆ¡£¿ÉÒÔÔÚ ngrok ÒÇ±í°åµÄ "Auth" ²¿·ÖÕÒµ½Ëü¡£
-REM Ãâ·ÑÕË»§ºÍ¸¶·ÑÕË»§¶¼ÐèÒªÉèÖÃ´ËÏî¡£
-REM ngrokÍøÕ¾: https://dashboard.ngrok.com
+REM è®¾ç½® ngrok AUTH TOKEN
+REM è¿™æ˜¯ ngrok è´¦æˆ·çš„èº«ä»½éªŒè¯ä»¤ç‰Œã€‚å¯ä»¥åœ¨ ngrok ä»ªè¡¨æ¿çš„ "Auth" éƒ¨åˆ†æ‰¾åˆ°å®ƒã€‚
+REM å…è´¹è´¦æˆ·å’Œä»˜è´¹è´¦æˆ·éƒ½éœ€è¦è®¾ç½®æ­¤é¡¹ã€‚
+REM ngrokç½‘ç«™: https://dashboard.ngrok.com
 set NGROK_AUTH_TOKEN=
 
-REM ÉèÖÃ ngrok ×Ô¶¨ÒåÓòÃû
-REM ÕâÔÊÐíÊ¹ÓÃ×Ô¼ºµÄÓòÃû¶ø²»ÊÇ ngrok µÄËæ»ú×ÓÓòÃû¡£
-REM ×¢Òâ£º´Ë¹¦ÄÜ½öÊÊÓÃÓÚ ngrok ¸¶·ÑÕË»§¡£
-REM Ê¹ÓÃ´Ë¹¦ÄÜÇ°£¬ÇëÈ·±£ÒÑÔÚ ngrok ÒÇ±í°åÖÐÌí¼Ó²¢ÑéÖ¤ÁË¸ÃÓòÃû¡£
-REM ¸ñÊ½Ê¾Àý£ºyour-custom-domain.com
-REM Èç¹ûÊ¹ÓÃÃâ·ÑÕË»§»ò²»ÏëÊ¹ÓÃ×Ô¶¨ÒåÓòÃû£¬Çë½«´ËÏîÁô¿Õ¡£
+REM è®¾ç½® ngrok è‡ªå®šä¹‰åŸŸå
+REM è¿™å…è®¸ä½¿ç”¨è‡ªå·±çš„åŸŸåè€Œä¸æ˜¯ ngrok çš„éšæœºå­åŸŸåã€‚
+REM æ³¨æ„ï¼šæ­¤åŠŸèƒ½ä»…é€‚ç”¨äºŽ ngrok ä»˜è´¹è´¦æˆ·ã€‚
+REM ä½¿ç”¨æ­¤åŠŸèƒ½å‰ï¼Œè¯·ç¡®ä¿å·²åœ¨ ngrok ä»ªè¡¨æ¿ä¸­æ·»åŠ å¹¶éªŒè¯äº†è¯¥åŸŸåã€‚
+REM æ ¼å¼ç¤ºä¾‹ï¼šyour-custom-domain.com
+REM å¦‚æžœä½¿ç”¨å…è´¹è´¦æˆ·æˆ–ä¸æƒ³ä½¿ç”¨è‡ªå®šä¹‰åŸŸåï¼Œè¯·å°†æ­¤é¡¹ç•™ç©ºã€‚
 set NGROK_CUSTOM_DOMAIN=
 
-REM ÉèÖÃ https_proxy ´úÀí£¬¿ÉÒÔÊ¹ÓÃ±¾µØµÄsocks5»òhttp(s)´úÀí
-REM ÀýÈç£¬Ê¹ÓÃ HTTP ´úÀí£ºexport https_proxy=http://127.0.0.1:7890
-REM »òÕßÊ¹ÓÃ SOCKS5 ´úÀí£ºexport https_proxy=socks5://host:port:username:password
+REM è®¾ç½® https_proxy ä»£ç†ï¼Œå¯ä»¥ä½¿ç”¨æœ¬åœ°çš„socks5æˆ–http(s)ä»£ç†
+REM ä¾‹å¦‚ï¼Œä½¿ç”¨ HTTP ä»£ç†ï¼šexport https_proxy=http://127.0.0.1:7890
+REM æˆ–è€…ä½¿ç”¨ SOCKS5 ä»£ç†ï¼šexport https_proxy=socks5://host:port:username:password
 set https_proxy=
 
-REM ÉèÖÃ PASSWORD APIÃÜÂë
+REM è®¾ç½® PASSWORD APIå¯†ç 
 set PASSWORD=
 
-REM ÉèÖÃ PORT ¶Ë¿Ú
+REM è®¾ç½® PORT ç«¯å£
 set PORT=8080
 
-REM ÉèÖÃAIÄ£ÐÍ(ClaudeÏµÁÐÄ£ÐÍÖ±½ÓÔÚ¾Æ¹ÝÖÐÑ¡Ôñ¼´¿ÉÊ¹ÓÃ£¬ÐÞ¸Ä`AI_MODEL`»·¾³±äÁ¿¿ÉÒÔÇÐ»»ClaudeÒÔÍâµÄÄ£ÐÍ£¬Ö§³ÖµÄÄ£ÐÍÃû×ÖÈçÏÂ (Çë²Î¿¼¹ÙÍø»ñÈ¡×îÐÂÄ£ÐÍ))
+REM è®¾ç½®AIæ¨¡åž‹(Claudeç³»åˆ—æ¨¡åž‹ç›´æŽ¥åœ¨é…’é¦†ä¸­é€‰æ‹©å³å¯ä½¿ç”¨ï¼Œä¿®æ”¹`AI_MODEL`çŽ¯å¢ƒå˜é‡å¯ä»¥åˆ‡æ¢Claudeä»¥å¤–çš„æ¨¡åž‹ï¼Œæ”¯æŒçš„æ¨¡åž‹åå­—å¦‚ä¸‹ (è¯·å‚è€ƒå®˜ç½‘èŽ·å–æœ€æ–°æ¨¡åž‹))
 set AI_MODEL=
 
-REM ×Ô¶¨Òå»á»°Ä£Ê½
+REM è‡ªå®šä¹‰ä¼šè¯æ¨¡å¼
 set USE_CUSTOM_MODE=false
 
-REM ÆôÓÃÄ£Ê½ÂÖ»»
-REM Ö»ÓÐµ± USE_CUSTOM_MODE ºÍ ENABLE_MODE_ROTATION ¶¼ÉèÖÃÎª true Ê±£¬²Å»áÆôÓÃÄ£Ê½ÂÖ»»¹¦ÄÜ¡£
-REM ¿ÉÒÔÔÚ×Ô¶¨ÒåÄ£Ê½ºÍÄ¬ÈÏÄ£Ê½Ö®¼ä¶¯Ì¬ÇÐ»»
+REM å¯ç”¨æ¨¡å¼è½®æ¢
+REM åªæœ‰å½“ USE_CUSTOM_MODE å’Œ ENABLE_MODE_ROTATION éƒ½è®¾ç½®ä¸º true æ—¶ï¼Œæ‰ä¼šå¯ç”¨æ¨¡å¼è½®æ¢åŠŸèƒ½ã€‚
+REM å¯ä»¥åœ¨è‡ªå®šä¹‰æ¨¡å¼å’Œé»˜è®¤æ¨¡å¼ä¹‹é—´åŠ¨æ€åˆ‡æ¢
 set ENABLE_MODE_ROTATION=false
 
-REM ÊÇ·ñÆôÓÃÒþÉíÄ£Ê½
+REM æ˜¯å¦å¯ç”¨éšèº«æ¨¡å¼
 set INCOGNITO_MODE=false
 
-REM ÉèÖÃÉÏ´«ÎÄ¼þ¸ñÊ½ (docx »ò txt) gpt_4o Ê¹ÓÃtxt¿ÉÄÜ¸üºÃÆÆÏÞ
+REM è®¾ç½®ä¸Šä¼ æ–‡ä»¶æ ¼å¼ (docx æˆ– txt) gpt_4o ä½¿ç”¨txtå¯èƒ½æ›´å¥½ç ´é™
 set UPLOAD_FILE_FORMAT=docx
 
 REM ---------------------------------------------------
-REM ¿ØÖÆÊÇ·ñÔÚ¿ªÍ·²åÈëÂÒÂë
+REM æŽ§åˆ¶æ˜¯å¦åœ¨å¼€å¤´æ’å…¥ä¹±ç 
 set ENABLE_GARBLED_START=false
-REM ÉèÖÃ¿ªÍ·²åÈëÂÒÂë×îÐ¡³¤¶È
+REM è®¾ç½®å¼€å¤´æ’å…¥ä¹±ç æœ€å°é•¿åº¦
 set GARBLED_START_MIN_LENGTH=1000
-REM ÉèÖÃ¿ªÍ·²åÈëÂÒÂë×î´ó³¤¶È
+REM è®¾ç½®å¼€å¤´æ’å…¥ä¹±ç æœ€å¤§é•¿åº¦
 set GARBLED_START_MAX_LENGTH=5000
-REM ÉèÖÃ½áÎ²²åÈëÂÒÂë¹Ì¶¨³¤¶È
+REM è®¾ç½®ç»“å°¾æ’å…¥ä¹±ç å›ºå®šé•¿åº¦
 set GARBLED_END_LENGTH=500
-REM ¿ØÖÆÊÇ·ñÔÚ½áÎ²²åÈëÂÒÂë
+REM æŽ§åˆ¶æ˜¯å¦åœ¨ç»“å°¾æ’å…¥ä¹±ç 
 set ENABLE_GARBLED_END=false
 REM ---------------------------------------------------
 
-REM ÔËÐÐ Node.js Ó¦ÓÃ³ÌÐò
-node index.mjs
+REM è¿è¡Œ Node.js åº”ç”¨ç¨‹åº
+npm run node
 
-REM ÔÝÍ£½Å±¾Ö´ÐÐ,µÈ´ýÓÃ»§°´ÈÎÒâ¼üÍË³ö
+REM æš‚åœè„šæœ¬æ‰§è¡Œ,ç­‰å¾…ç”¨æˆ·æŒ‰ä»»æ„é”®é€€å‡º
 pause

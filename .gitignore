@@ -3,7 +3,8 @@ package-lock.json
 .vscode
 config
 test.js
-test.mjs
+test.js
 config.js
-config.mjs
+config.js
 browser_profiles
+you.config.js
