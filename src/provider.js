@@ -14,16 +14,16 @@ const getConfig = (cookies) => {
 }
 
 class ProviderManager {
-    constructor(youConfig) {
+    constructor({ youConfig, perplexityConfig }) {
         // 根据环境变量初始化提供者
         const activeProvider = process.env.ACTIVE_PROVIDER || 'you';
-        const perplexityCookie = process.env.PERPLEXITY_COOKIE?.split(/;|,|；|，/) || [];
+
         switch (activeProvider) {
             case 'you':
                 this.provider = new YouProvider(youConfig);
                 break;
             case 'perplexity':
-                this.provider = new PerplexityProvider(getConfig(perplexityCookie));
+                this.provider = new PerplexityProvider(perplexityConfig);
                 break;
             case 'happyapi':
                 this.provider = new HappyApiProvider();

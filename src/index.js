@@ -48,33 +48,46 @@ const modelMappping = {
     "openai-o1": "openai_o1",
 };
 
-
-export let config = {};
+const getConfig = (cookies) => {
+    return {
+        sessions: cookies.map(cookie => {
+            return {
+                cookie
+            }
+        })
+    }
+}
+export let youConfig = {};
 // 判断文件是否存在 config.js 或者 you.config.json esm
 if (fs.existsSync(path.join(process.cwd(), "config.js"))) {
-    config = await import(path.join(process.cwd(), "config.js"));
-} else if (fs.existsSync(path.join(process.cwd(), "you.config.json"))) {
-    config = JSON.parse(fs.readFileSync(path.join(process.cwd(), "you.config.json"), "utf-8"));
+    youConfig = await import(path.join(process.cwd(), "config.js"));
+} else if (fs.existsSync(path.join(process.cwd(), "config.mjs"))) {
+    youConfig = await import(path.join(process.cwd(), "config.mjs"));
+}
+else if (fs.existsSync(path.join(process.cwd(), "you.config.json"))) {
+    youConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), "you.config.json"), "utf-8"));
 } else {
     // import config.js
-    const getConfig = (cookies) => {
-        return {
-            sessions: cookies.map(cookie => {
-                return {
-                    cookie
-                }
-            })
-        }
-    }
+
     const cookie = process.env.YOU_COOKIE?.split(/;|,|；|，/) || []
     if (cookie.length === 0) {
         console.warn("请配置 YOU_COOKIE 环境变量在 .env 文件中，多个 cookie 用逗号或分号分隔。如果没有请重新命名 .env.example 为 .env 并填写。");
         console.log("手动退出进程请安 Ctrl+C");
     }
-    config = getConfig(cookie);
+    youConfig = getConfig(cookie);
 }
-
-const provider = new YouProvider(config);
+let perplexityConfig = {}
+if (fs.execSync(path.join(process.cwd(), "perplexityConfig.js"))) {
+    perplexityConfig = await import(path.join(process.cwd(), "perplexityConfig.js"));
+} else if (fs.execSync(path.join(process.cwd(), "perplexityConfig.mjs"))) {
+    perplexityConfig = await import(path.join(process.cwd(), "perplexityConfig.mjs"));
+} else {
+    const perplexityCookie = process.env.PERPLEXITY_COOKIE?.split(/;|,|；|，/) || [];
+    perplexityConfig = getConfig(perplexityCookie);
+}
+const provider = new YouProvider({
+    youConfig, perplexityConfig
+});
 await provider.init(config);
 
 // handle preflight request
