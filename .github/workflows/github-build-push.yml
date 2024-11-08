@@ -2,10 +2,6 @@ name: Build and Push Container
 
 on:
   push:
-    branches:
-        - "*"
-    # paths:
-    #   - 'Dockerfile'
   workflow_dispatch:    
 jobs:
   build-and-push:
@@ -35,5 +31,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}        
+            ghcr.io/zerxz/youchatproxy:latest
+            ghcr.io/zerxz/youchatproxy:${{ github.sha }}        
