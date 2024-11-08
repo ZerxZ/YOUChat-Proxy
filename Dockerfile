@@ -10,12 +10,16 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update -y \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+# Install Chrome Stable when specified
+RUN if [ -n "$CHROME_STABLE_VERSION" ]; then \
+    wget -q -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_STABLE_VERSION}-1_amd64.deb && \
+    apt install -y /tmp/chrome.deb &&\
+    rm /tmp/chrome.deb; \
+    elif [ "$USE_CHROME_STABLE" = "true" ]; then \
+    cd /tmp &&\
+    wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb &&\
+    dpkg -i google-chrome-stable_current_amd64.deb;\
+    fi
 
 # Set up the working directory in the container
 WORKDIR /app
@@ -34,4 +38,4 @@ EXPOSE 8080
 
 # Command to run the application
 
-CMD [ "node", "src/index.js" ]
+CMD [ "npm", "run node" ]
