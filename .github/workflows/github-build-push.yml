@@ -3,7 +3,7 @@ name: Build and Push Container
 on:
   push:
     branches:
-      - main
+        - "*"
     # paths:
     #   - 'Dockerfile'
   workflow_dispatch:    
