@@ -4,7 +4,7 @@ import YouProvider from "./provider.js";
 import localtunnel from "localtunnel";
 import ngrok from 'ngrok';
 import { v4 as uuidv4 } from "uuid";
-import fs from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import process from "node:process";
 import path from "node:path";
 import './proxyAgent.js';
@@ -59,13 +59,13 @@ const getConfig = (cookies) => {
 }
 export let youConfig = {};
 // 判断文件是否存在 config.js 或者 you.config.json esm
-if (fs.existsSync(path.join(process.cwd(), "config.js"))) {
+if (existsSync(path.join(process.cwd(), "config.js"))) {
     youConfig = await import(path.join(process.cwd(), "config.js"));
-} else if (fs.existsSync(path.join(process.cwd(), "config.mjs"))) {
+} else if (existsSync(path.join(process.cwd(), "config.mjs"))) {
     youConfig = await import(path.join(process.cwd(), "config.mjs"));
 }
-else if (fs.existsSync(path.join(process.cwd(), "you.config.json"))) {
-    youConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), "you.config.json"), "utf-8"));
+else if (existsSync(path.join(process.cwd(), "you.config.json"))) {
+    youConfig = JSON.parse(readFileSync(path.join(process.cwd(), "you.config.json"), "utf-8"));
 } else {
     // import config.js
 
@@ -77,9 +77,9 @@ else if (fs.existsSync(path.join(process.cwd(), "you.config.json"))) {
     youConfig = getConfig(cookie);
 }
 let perplexityConfig = {}
-if (fs.execSync(path.join(process.cwd(), "perplexityConfig.js"))) {
+if (existsSync(path.join(process.cwd(), "perplexityConfig.js"))) {
     perplexityConfig = await import(path.join(process.cwd(), "perplexityConfig.js"));
-} else if (fs.execSync(path.join(process.cwd(), "perplexityConfig.mjs"))) {
+} else if (existsSync(path.join(process.cwd(), "perplexityConfig.mjs"))) {
     perplexityConfig = await import(path.join(process.cwd(), "perplexityConfig.mjs"));
 } else {
     const perplexityCookie = process.env.PERPLEXITY_COOKIE?.split(/;|,|；|，/) || [];
@@ -88,7 +88,7 @@ if (fs.execSync(path.join(process.cwd(), "perplexityConfig.js"))) {
 const provider = new YouProvider({
     youConfig, perplexityConfig
 });
-await provider.init(config);
+await provider.init();
 
 // handle preflight request
 app.use((req, res, next) => {

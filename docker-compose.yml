@@ -2,7 +2,10 @@ version: "3"
 
 services:
   webapp:
-    build: .
+    # 本地构建
+    # build: .
+    # 远程构建
+    image: ghcr.io/zerxz/youchatproxy:latest
     ports:
       - "8080:8080"
     volumes:
