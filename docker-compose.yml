@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+  webapp:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - config.js:app/config.js
+      - config.mjs:app/config.mjs
+      - you.config.json:app/you.config.json
+      - perplexityConfig.mjs:app/perplexityConfig.mjs
+      - perplexityConfig.js:app/perplexityConfig.js
+    env_file:
+      - .env
